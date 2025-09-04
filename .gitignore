@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Envs
+.venv/
+env/
+venv/
+
+# Build/Dist
+build/
+dist/
+*.egg-info/
+
+# Artifacts
+*.png
+*.pdf
+*.csv
+*.parquet
+*.jsonl
+
+# Local config
+.env
+

@@ -1,0 +1,161 @@
+\begin{thebibliography}{}
+
+\bibitem[Asness and Frazzini, 2013]{asness2013devil}
+Asness, C. and Frazzini, A. (2013).
+\newblock The devil in hml’s details.
+\newblock {\em Journal of Portfolio Management}, 39(4):49--68.
+
+\bibitem[Bhatia et~al., 2024]{bhatia-etal-2024-fintral}
+Bhatia, G., Nagoudi, E. M.~B., Cavusoglu, H., and Abdul-Mageed, M. (2024).
+\newblock {F}in{T}ral: A family of {GPT}-4 level multimodal financial large language models.
+\newblock In Ku, L.-W., Martins, A., and Srikumar, V., editors, {\em Findings of the Association for Computational Linguistics: ACL 2024}, pages 13064--13087, Bangkok, Thailand. Association for Computational Linguistics.
+
+\bibitem[Carhart, 1997]{carhart1997persistence}
+Carhart, M.~M. (1997).
+\newblock On persistence in mutual fund performance.
+\newblock {\em The Journal of finance}, 52(1):57--82.
+
+\bibitem[Chamberlain and Rothschild, 1982]{chamberlain1982arbitrage}
+Chamberlain, G. and Rothschild, M. (1982).
+\newblock Arbitrage, factor structure, and mean-variance analysis on large asset markets.
+
+\bibitem[De~Prado, 2018]{de2018advances}
+De~Prado, M.~L. (2018).
+\newblock {\em Advances in financial machine learning}.
+\newblock John Wiley \& Sons.
+
+\bibitem[Dhar, 2024]{dhar2024paradigm}
+Dhar, V. (2024).
+\newblock The paradigm shifts in artificial intelligence.
+\newblock {\em Commun. ACM}, 67(11):50–59.
+
+\bibitem[Dhar et~al., 2000]{dhar2000discovering}
+Dhar, V., Chou, D., and Provost, F. (2000).
+\newblock Discovering interesting patterns for investment decision making with glower —a genetic learner overlaid with entropy reduction.
+\newblock {\em Data Mining and Knowledge Discovery}, 4:251--280.
+
+\bibitem[Fairhurst and Greene, 2025]{fairhurst2025how}
+Fairhurst, D.~D. and Greene, D. (2025).
+\newblock How much does chatgpt know about finance?
+\newblock {\em Financial Analysts Journal}, 81(1):12--32.
+
+\bibitem[Fama and French, 1993]{fama1993common}
+Fama, E.~F. and French, K.~R. (1993).
+\newblock Common risk factors in the returns on stocks and bonds.
+\newblock {\em Journal of financial economics}, 33(1):3--56.
+
+\bibitem[Giglio et~al., 2022]{giglio2022factor}
+Giglio, S., Kelly, B., and Xiu, D. (2022).
+\newblock Factor models, machine learning, and asset pricing.
+\newblock {\em Annual Review of Financial Economics}, 14(1):337--368.
+
+\bibitem[{Google}, 2025]{GoogleGeminiDeepResearch}
+{Google} (2025).
+\newblock {Gemini Overview: Deep Research}.
+\newblock \url{https://gemini.google/overview/deep-research}.
+\newblock Accessed: 2025-04-03.
+
+\bibitem[Graham and Dodd, 1934]{graham1934security}
+Graham, B. and Dodd, D. (1934).
+\newblock {\em Security analysis}.
+\newblock McGraw Hill.
+
+\bibitem[Grinold and Kahn, 2000]{grinold2000active}
+Grinold, R.~C. and Kahn, R.~N. (2000).
+\newblock Active portfolio management.
+
+\bibitem[Harvey et~al., 2016]{harvey2016and}
+Harvey, C.~R., Liu, Y., and Zhu, H. (2016).
+\newblock … and the cross-section of expected returns.
+\newblock {\em The Review of Financial Studies}, 29(1):5--68.
+
+\bibitem[Hong et~al., 2024]{hong2024metagpt}
+Hong, S., Zhuge, M., Chen, J., Zheng, X., Cheng, Y., Wang, J., Zhang, C., Wang, Z., Yau, S. K.~S., Lin, Z., Zhou, L., Ran, C., Xiao, L., Wu, C., and Schmidhuber, J. (2024).
+\newblock Meta{GPT}: Meta programming for a multi-agent collaborative framework.
+\newblock In {\em The Twelfth International Conference on Learning Representations}.
+
+\bibitem[Jegadeesh and Titman, 1993]{jegadeesh1993returns}
+Jegadeesh, N. and Titman, S. (1993).
+\newblock Returns to buying winners and selling losers: Implications for stock market efficiency.
+\newblock {\em The Journal of finance}, 48(1):65--91.
+
+\bibitem[Kelly et~al., 2019]{kelly2019characteristics}
+Kelly, B.~T., Pruitt, S., and Su, Y. (2019).
+\newblock Characteristics are covariances: A unified model of risk and return.
+\newblock {\em Journal of Financial Economics}, 134(3):501--524.
+
+\bibitem[Lu et~al., 2024]{lu2024ai}
+Lu, C., Lu, C., Lange, R.~T., Foerster, J., Clune, J., and Ha, D. (2024).
+\newblock The ai scientist: Towards fully automated open-ended scientific discovery.
+\newblock {\em arXiv preprint arXiv:2408.06292}.
+
+\bibitem[{OpenAI}, 2025]{openai2025deepresearch}
+{OpenAI} (2025).
+\newblock Introducing deep research.
+\newblock \url{https://openai.com/index/introducing-deep-research/}.
+\newblock Accessed: 2025-04-03.
+
+\bibitem[Samuel, 1959]{samuel1959some}
+Samuel, A.~L. (1959).
+\newblock Some studies in machine learning using the game of checkers.
+\newblock {\em IBM Journal of research and development}, 3(3):210--229.
+
+\bibitem[Sharpe, 1964]{sharpe1964capital}
+Sharpe, W.~F. (1964).
+\newblock Capital asset prices: A theory of market equilibrium under conditions of risk.
+\newblock {\em The journal of finance}, 19(3):425--442.
+
+\bibitem[Simon, 1973]{simon1973structure}
+Simon, H.~A. (1973).
+\newblock The structure of ill structured problems.
+\newblock {\em Artificial intelligence}, 4(3-4):181--201.
+
+\bibitem[Steiner, 2012]{steiner2012automate}
+Steiner, C. (2012).
+\newblock {\em Automate This: How Algorithms Came to Rule Our World}.
+
+\bibitem[Tetlock and Gardner, 2016]{tetlock2016superforecasting}
+Tetlock, P.~E. and Gardner, D. (2016).
+\newblock {\em Superforecasting: The art and science of prediction}.
+\newblock Random House.
+
+\bibitem[Wang et~al., 2023]{wang2023finvis}
+Wang, Z., Li, Y., Wu, J., Soon, J., and Zhang, X. (2023).
+\newblock Finvis-gpt: A multimodal large language model for financial chart analysis.
+\newblock {\em arXiv preprint arXiv:2308.01430}.
+
+\bibitem[Wei et~al., 2022]{wei2022chain}
+Wei, J., Wang, X., Schuurmans, D., Bosma, M., Xia, F., Chi, E., Le, Q.~V., Zhou, D., et~al. (2022).
+\newblock Chain-of-thought prompting elicits reasoning in large language models.
+\newblock {\em Advances in neural information processing systems}, 35:24824--24837.
+
+\bibitem[Weiss, 2006]{weiss2006after}
+Weiss, D.~M. (2006).
+\newblock {\em After the Trade Is Made, Revised Ed.: Processing Securities Transactions}.
+\newblock Penguin.
+
+\bibitem[Wu et~al., 2023]{wu2023bloomberggpt}
+Wu, S., Irsoy, O., Lu, S., Dabravolski, V., Dredze, M., Gehrmann, S., Kambadur, P., Rosenberg, D., and Mann, G. (2023).
+\newblock Bloomberggpt: A large language model for finance.
+\newblock {\em arXiv preprint arXiv:2303.17564}.
+
+\bibitem[Xie et~al., 2023]{xie2023pixiu}
+Xie, Q., Han, W., Zhang, X., Lai, Y., Peng, M., Lopez-Lira, A., and Huang, J. (2023).
+\newblock Pixiu: A large language model, instruction data and evaluation benchmark for finance.
+\newblock {\em arXiv preprint arXiv:2306.05443}.
+
+\bibitem[Zhang et~al., 2023]{zhang2023instruct}
+Zhang, B., Yang, H., and Liu, X.-Y. (2023).
+\newblock Instruct-fingpt: Financial sentiment analysis by instruction tuning of general-purpose large language models.
+\newblock {\em arXiv preprint arXiv:2306.12659}.
+
+\bibitem[Zhang et~al., 2024]{zhang2024finbench}
+Zhang, Z., Cao, Y., and Liao, L. (2024).
+\newblock Finbench: Benchmarking {LLM}s in complex financial problem solving and reasoning.
+
+\bibitem[Zhou et~al., 2024]{zhou2024finrobot}
+Zhou, T., Wang, P., Wu, Y., and Yang, H. (2024).
+\newblock Finrobot: Ai agent for equity research and valuation with large language models.
+\newblock {\em arXiv preprint arXiv:2411.08804}.
+
+\end{thebibliography}

@@ -1,0 +1,23 @@
+[project]
+name = "investing-agent"
+version = "0.1.0"
+description = "Investing Agent: deterministic, provenance-first valuation and reporting"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Chaorong Chen" }
+]
+dependencies = [
+  "numpy>=1.26",
+  "pydantic>=2.6",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
