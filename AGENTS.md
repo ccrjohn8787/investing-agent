@@ -39,3 +39,63 @@ Every agent must declare a clear contract:
   - Annotate the report with the failure cause, fallback used, and missing sections.
 - Never silently drop sections without adding context to the report and logs.
 
+---
+
+### Agent Contract Template
+
+Use this template when creating or updating an agent.
+
+- Name: <Agent Name>
+- Purpose: <What it does and why it exists>
+- Input schema: <Pydantic model(s) + parameters>
+- Output schema: <Pydantic model(s) or return type>
+- Parameters: <knobs/deltas/steps, defaults>
+- Timeouts/Retry: <limits + backoff policy>
+- Caching: <key formula (input hash + params + code sha), storage path>
+- Provenance: <how snapshots/IDs are attached or referenced>
+- Logging: <event types written to run.jsonl; fields included>
+- Tests: <unit coverage points + integration coverage>
+- Failure: <graceful degradation and annotations>
+
+---
+
+## Existing Agents
+
+### Valuation (Builder)
+- Name: Valuation Builder (`investing_agent/agents/valuation.py::build_inputs_from_fundamentals`)
+- Purpose: Converts parsed fundamentals and macro settings into kernel `InputsI` with optional user‑provided driver paths.
+- Input schema: `Fundamentals`; Parameters: `horizon`, `stable_growth`, `stable_margin`, `beta`, `macro`, `discounting`, optional `sales_growth_path`, `oper_margin_path`, `sales_to_capital_path`.
+- Output schema: `InputsI` (validated equal path lengths via `horizon()`).
+- Parameters: defaults derive from fundamentals (CAGR, TTM margins); WACC from macro (rf + (ERP + country) × beta).
+- Timeouts/Retry: N/A (pure local compute).
+- Caching: Suggested key = sha256({fundamentals, macro, overrides}) with code sha; stored as `out/<TICKER>/inputs.json`.
+- Provenance: Builder relies on fundamentals parsed from SEC snapshot; manifest should include EDGAR snapshot metadata.
+- Logging: `eventlog` entry `build_inputs` with input/output shas and duration.
+- Tests: `tests/unit/test_builder_overrides_and_writer.py` (override behavior, trending vs verbatim).
+- Failure: If overrides inconsistent (length mismatch handled by trend/clip), validation enforces horizon; raise with clear message.
+
+### Sensitivity
+- Name: Sensitivity (`investing_agent/agents/sensitivity.py::compute_sensitivity`)
+- Purpose: Grid sensitivity over growth and margin paths, returning value‑per‑share matrix.
+- Input schema: `InputsI`; Parameters: `growth_delta`, `margin_delta`, `steps` (tuple[int,int]).
+- Output schema: `SensitivityResult` with `grid`, `growth_axis`, `margin_axis`, `base_value_per_share`.
+- Timeouts/Retry: N/A (pure local compute).
+- Caching: Key = sha256({InputsI, growth_delta, margin_delta, steps}); ephemeral.
+- Provenance: Not applicable; derived from InputsI.
+- Logging: `eventlog` entry `sensitivity` with grid shape and duration.
+- Tests: `tests/unit/test_sensitivity.py` (monotonicity), writer tests for integration.
+- Failure: Clamp margins/growth to reasonable bounds inside loop to avoid invalid kernel inputs.
+
+### Writer (Markdown/HTML)
+- Name: Writer (`investing_agent/agents/writer.py::render_report`, `investing_agent/agents/html_writer.py::render_html_report`)
+- Purpose: Produce human‑readable reports (Markdown/HTML) from inputs, valuation outputs, and optional charts.
+- Input schema: `InputsI`, `ValuationV`; Optional: sensitivity/driver charts, `Fundamentals`, `companyfacts_json` (HTML).
+- Output schema: `str` (Markdown or HTML content).
+- Parameters: N/A; uses supplied bytes for charts.
+- Timeouts/Retry: N/A (pure formatting/compute).
+- Caching: Artifacts saved to `out/<TICKER>/report.md` and `report.html`; shas recorded in manifest.
+- Provenance: Embeds parsed fundamentals; HTML includes collapsible raw companyfacts JSON; citations should reference manifest snapshots.
+- Logging: `eventlog` entries `writer_md` / `writer_html` with byte counts and duration.
+- Tests: `tests/unit/test_builder_overrides_and_writer.py` (sections appear), `tests/unit/test_html_and_cli_parse.py` (HTML sections present).
+- Failure: If charts/fundamentals absent, degrade gracefully (omit sections) and annotate.
+
