@@ -4,6 +4,7 @@ import numpy as np
 
 from investing_agent.schemas.inputs import InputsI
 from investing_agent.schemas.valuation import ValuationV
+from dataclasses import dataclass
 
 
 def _fcff_path(I: InputsI):
@@ -69,6 +70,34 @@ def _terminal_value(I: InputsI, rev_T: float):
     return fcff_T1, tv_T
 
 
+@dataclass
+class Series:
+    revenue: np.ndarray
+    ebit: np.ndarray
+    fcff: np.ndarray
+    wacc: np.ndarray
+    discount_factors: np.ndarray
+    fcff_T1: float
+    terminal_value_T: float
+
+
+def series(I: InputsI) -> Series:
+    """Public API to get per-year series and terminal details for reporting/analysis."""
+    mode = I.discounting.mode
+    rev, ebit, fcff, wacc = _fcff_path(I)
+    df = _discount_factors(wacc, mode)
+    fcff_T1, tv_T = _terminal_value(I, rev[-1])
+    return Series(
+        revenue=rev,
+        ebit=ebit,
+        fcff=fcff,
+        wacc=wacc,
+        discount_factors=df,
+        fcff_T1=float(fcff_T1),
+        terminal_value_T=float(tv_T),
+    )
+
+
 def value(I: InputsI) -> ValuationV:
     mode = I.discounting.mode
     rev, ebit, fcff, wacc = _fcff_path(I)
@@ -93,4 +122,3 @@ def value(I: InputsI) -> ValuationV:
         value_per_share=vps,
         notes="end-year" if mode == "end" else "mid-year",
     )
-

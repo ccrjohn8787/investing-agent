@@ -203,6 +203,22 @@ REVENUE_TAGS = [
 EBIT_TAGS = [
     "OperatingIncomeLoss",
 ]
+DEPR_TAGS = [
+    "DepreciationDepletionAndAmortization",
+    "DepreciationAndAmortization",
+]
+CAPEX_TAGS = [
+    "PaymentsToAcquirePropertyPlantAndEquipment",
+    "CapitalExpenditures",
+]
+LEASE_ASSET_TAGS = [
+    "OperatingLeaseRightOfUseAsset",
+]
+LEASE_LIAB_TAGS = [
+    "OperatingLeaseLiability",
+    "OperatingLeaseLiabilityNoncurrent",
+    "OperatingLeaseLiabilityCurrent",
+]
 SHARES_TAGS = [
     "CommonStockSharesOutstanding",
 ]
@@ -211,9 +227,26 @@ TAX_RATE_TAGS = [
     "EffectiveIncomeTaxRate",
 ]
 
+# IFRS tags (companyfacts often under key 'ifrs-full')
+IFRS_REVENUE_TAGS = ["Revenue"]
+IFRS_EBIT_TAGS = ["OperatingProfitLoss", "ProfitLossFromOperatingActivities"]
+IFRS_SHARES_TAGS = [
+    "NumberOfSharesOutstanding",
+    "WeightedAverageNumberOfOrdinarySharesOutstandingBasic",
+]
+IFRS_TAX_RATE_TAGS = ["EffectiveTaxRate"]
+
+# Working capital (US-GAAP and IFRS) — annual snapshots
+CURR_ASSETS_TAGS = ["AssetsCurrent"]
+IFRS_CURR_ASSETS_TAGS = ["CurrentAssets"]
+CURR_LIABS_TAGS = ["LiabilitiesCurrent"]
+IFRS_CURR_LIABS_TAGS = ["CurrentLiabilities"]
+
 
 def parse_companyfacts_to_fundamentals(cf: dict, ticker: str, company: Optional[str] = None) -> Fundamentals:
-    facts = cf.get("facts", {}).get("us-gaap", {})
+    facts_root = cf.get("facts", {})
+    facts = facts_root.get("us-gaap", {})
+    facts_ifrs = facts_root.get("ifrs-full", {})
     # Revenue
     revenue = {}
     revenue_ttm: Optional[float] = None
@@ -230,6 +263,19 @@ def parse_companyfacts_to_fundamentals(cf: dict, ticker: str, company: Optional[
                     revenue_ttm = ttm
                 if revenue:
                     break
+    if not revenue and facts_ifrs:
+        for tag in IFRS_REVENUE_TAGS:
+            if tag in facts_ifrs:
+                pick = _pick_fact_unit(facts_ifrs[tag], ["USD", "USDm", "USDth"])
+                if pick:
+                    scale = _scale_for_unit(pick["unit"])
+                    series = pick["series"]
+                    revenue = _to_annual(series, scale=scale)
+                    ttm = _ttm_from_quarters(series, scale=scale)
+                    if ttm and ttm > 0:
+                        revenue_ttm = ttm
+                    if revenue:
+                        break
 
     # If TTM not found yet, try other tags for quarterly series without overriding annual dict
     if revenue_ttm is None:
@@ -243,6 +289,17 @@ def parse_companyfacts_to_fundamentals(cf: dict, ticker: str, company: Optional[
                 if ttm and ttm > 0:
                     revenue_ttm = ttm
                     break
+        if revenue_ttm is None and facts_ifrs:
+            for tag in IFRS_REVENUE_TAGS:
+                if tag in facts_ifrs:
+                    pick = _pick_fact_unit(facts_ifrs[tag], ["USD", "USDm", "USDth"])
+                    if not pick:
+                        continue
+                    scale = _scale_for_unit(pick["unit"])
+                    ttm = _ttm_from_quarters(pick["series"], scale=scale)
+                    if ttm and ttm > 0:
+                        revenue_ttm = ttm
+                        break
 
     # EBIT
     ebit = {}
@@ -260,6 +317,19 @@ def parse_companyfacts_to_fundamentals(cf: dict, ticker: str, company: Optional[
                     ebit_ttm = ttm
                 if ebit:
                     break
+    if not ebit and facts_ifrs:
+        for tag in IFRS_EBIT_TAGS:
+            if tag in facts_ifrs:
+                pick = _pick_fact_unit(facts_ifrs[tag], ["USD", "USDm", "USDth"])
+                if pick:
+                    scale = _scale_for_unit(pick["unit"])
+                    series = pick["series"]
+                    ebit = _to_annual(series, scale=scale)
+                    ttm = _ttm_from_quarters(series, scale=scale)
+                    if ttm and ttm > 0:
+                        ebit_ttm = ttm
+                    if ebit:
+                        break
 
     # Shares
     shares_out = None
@@ -273,6 +343,16 @@ def parse_companyfacts_to_fundamentals(cf: dict, ticker: str, company: Optional[
                     y = max(ann.keys())
                     shares_out = float(ann[y])
                     break
+    if shares_out is None and facts_ifrs:
+        for tag in IFRS_SHARES_TAGS:
+            if tag in facts_ifrs:
+                pick = _pick_fact_unit(facts_ifrs[tag], ["shares", "sharesPure", "pure"])
+                if pick and pick["series"]:
+                    ann = _to_annual(pick["series"], scale=1.0)
+                    if ann:
+                        y = max(ann.keys())
+                        shares_out = float(ann[y])
+                        break
 
     # Tax rate (approximate)
     tax_rate = None
@@ -288,6 +368,136 @@ def parse_companyfacts_to_fundamentals(cf: dict, ticker: str, company: Optional[
                         tr = tr / 100.0
                     tax_rate = max(0.0, min(0.6, tr))
                     break
+    if tax_rate is None and facts_ifrs:
+        for tag in IFRS_TAX_RATE_TAGS:
+            if tag in facts_ifrs:
+                pick = _pick_fact_unit(facts_ifrs[tag], ["pure"])
+                if pick and pick["series"]:
+                    ann = _to_annual(pick["series"], scale=1.0)
+                    if ann:
+                        y = max(ann.keys())
+                        tr = float(ann[y])
+                        if tr > 1:
+                            tr = tr / 100.0
+                        tax_rate = max(0.0, min(0.6, tr))
+                        break
+
+    # Depreciation & amortization (annual)
+    dep_amort = {}
+    for tag in DEPR_TAGS:
+        if tag in facts:
+            pick = _pick_fact_unit(facts[tag], ["USD", "USDm", "USDth"])
+            if pick:
+                scale = _scale_for_unit(pick["unit"])
+                dep_amort = _to_annual(pick["series"], scale=scale)
+                if dep_amort:
+                    break
+    if not dep_amort and facts_ifrs:
+        for tag in ["DepreciationAndAmortisationExpense", "DepreciationAndAmortizationExpense"]:
+            if tag in facts_ifrs:
+                pick = _pick_fact_unit(facts_ifrs[tag], ["USD", "USDm", "USDth"])
+                if pick:
+                    scale = _scale_for_unit(pick["unit"])
+                    dep_amort = _to_annual(pick["series"], scale=scale)
+                    if dep_amort:
+                        break
+
+    # Capex (annual, sign may be negative; we keep sign from filings)
+    capex = {}
+    for tag in CAPEX_TAGS:
+        if tag in facts:
+            pick = _pick_fact_unit(facts[tag], ["USD", "USDm", "USDth"])
+            if pick:
+                scale = _scale_for_unit(pick["unit"])
+                capex = _to_annual(pick["series"], scale=scale)
+                if capex:
+                    break
+    if not capex and facts_ifrs:
+        for tag in [
+            "PurchaseOfPropertyPlantAndEquipment",
+            "PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities",
+        ]:
+            if tag in facts_ifrs:
+                pick = _pick_fact_unit(facts_ifrs[tag], ["USD", "USDm", "USDth"])
+                if pick:
+                    scale = _scale_for_unit(pick["unit"])
+                    capex = _to_annual(pick["series"], scale=scale)
+                    if capex:
+                        break
+
+    # Lease assets/liabilities (annual)
+    lease_assets = {}
+    for tag in LEASE_ASSET_TAGS:
+        if tag in facts:
+            pick = _pick_fact_unit(facts[tag], ["USD", "USDm", "USDth"])
+            if pick:
+                scale = _scale_for_unit(pick["unit"])
+                lease_assets = _to_annual(pick["series"], scale=scale)
+                if lease_assets:
+                    break
+    if not lease_assets and facts_ifrs:
+        for tag in ["Right-of-useAssets", "Right-of-useAsset"]:
+            if tag in facts_ifrs:
+                pick = _pick_fact_unit(facts_ifrs[tag], ["USD", "USDm", "USDth"])
+                if pick:
+                    scale = _scale_for_unit(pick["unit"])
+                    lease_assets = _to_annual(pick["series"], scale=scale)
+                    if lease_assets:
+                        break
+    lease_liabilities = {}
+    for tag in LEASE_LIAB_TAGS:
+        if tag in facts:
+            pick = _pick_fact_unit(facts[tag], ["USD", "USDm", "USDth"])
+            if pick:
+                scale = _scale_for_unit(pick["unit"])
+                ll = _to_annual(pick["series"], scale=scale)
+                # Merge Current/Noncurrent if both present; prefer sum by year
+                for y, v in ll.items():
+                    lease_liabilities[y] = float(lease_liabilities.get(y, 0.0)) + float(v)
+    if facts_ifrs:
+        for tag in ["LeaseLiabilities", "CurrentLeaseLiabilities", "NoncurrentLeaseLiabilities"]:
+            if tag in facts_ifrs:
+                pick = _pick_fact_unit(facts_ifrs[tag], ["USD", "USDm", "USDth"])
+                if pick:
+                    scale = _scale_for_unit(pick["unit"])
+                    ll = _to_annual(pick["series"], scale=scale)
+                    for y, v in ll.items():
+                        lease_liabilities[y] = float(lease_liabilities.get(y, 0.0)) + float(v)
+
+    # Current assets/liabilities
+    current_assets = {}
+    for tag in CURR_ASSETS_TAGS:
+        if tag in facts:
+            pick = _pick_fact_unit(facts[tag], ["USD", "USDm", "USDth"])
+            if pick:
+                current_assets = _to_annual(pick["series"], scale=_scale_for_unit(pick["unit"]))
+                if current_assets:
+                    break
+    if not current_assets and facts_ifrs:
+        for tag in IFRS_CURR_ASSETS_TAGS:
+            if tag in facts_ifrs:
+                pick = _pick_fact_unit(facts_ifrs[tag], ["USD", "USDm", "USDth"])
+                if pick:
+                    current_assets = _to_annual(pick["series"], scale=_scale_for_unit(pick["unit"]))
+                    if current_assets:
+                        break
+
+    current_liabilities = {}
+    for tag in CURR_LIABS_TAGS:
+        if tag in facts:
+            pick = _pick_fact_unit(facts[tag], ["USD", "USDm", "USDth"])
+            if pick:
+                current_liabilities = _to_annual(pick["series"], scale=_scale_for_unit(pick["unit"]))
+                if current_liabilities:
+                    break
+    if not current_liabilities and facts_ifrs:
+        for tag in IFRS_CURR_LIABS_TAGS:
+            if tag in facts_ifrs:
+                pick = _pick_fact_unit(facts_ifrs[tag], ["USD", "USDm", "USDth"])
+                if pick:
+                    current_liabilities = _to_annual(pick["series"], scale=_scale_for_unit(pick["unit"]))
+                    if current_liabilities:
+                        break
 
     return Fundamentals(
         company=company or cf.get("entityName", ticker),
@@ -299,4 +509,10 @@ def parse_companyfacts_to_fundamentals(cf: dict, ticker: str, company: Optional[
         ebit_ttm=ebit_ttm,
         shares_out=shares_out,
         tax_rate=tax_rate,
+        dep_amort=dep_amort,
+        capex=capex,
+        lease_assets=lease_assets,
+        lease_liabilities=lease_liabilities,
+        current_assets=current_assets,
+        current_liabilities=current_liabilities,
     )

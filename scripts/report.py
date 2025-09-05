@@ -10,6 +10,7 @@ from investing_agent.agents.plotting import plot_driver_paths, plot_sensitivity_
 from investing_agent.agents.sensitivity import compute_sensitivity
 from investing_agent.agents.valuation import build_inputs_from_fundamentals
 from investing_agent.agents.writer import render_report
+from investing_agent.agents.html_writer import render_html_report
 from investing_agent.connectors.edgar import (
     fetch_companyfacts,
     parse_companyfacts_to_fundamentals,
@@ -22,17 +23,155 @@ from investing_agent.connectors.ust import (
 )
 from investing_agent.kernels.ginzu import value as kernel_value
 from investing_agent.schemas.inputs import InputsI
+from investing_agent.schemas.fundamentals import Fundamentals
+
+
+def _parse_path_arg(s: str | None) -> list[float] | None:
+    if not s:
+        return None
+    out = []
+    for part in s.split(","):
+        p = part.strip()
+        if not p:
+            continue
+        is_pct = p.endswith("%")
+        if is_pct:
+            p = p[:-1]
+        val = float(p)
+        if is_pct or abs(val) > 1.0:
+            val = val / 100.0
+        out.append(val)
+    return out or None
+
+def _load_config(path: Path) -> dict:
+    try:
+        text = path.read_text()
+    except Exception as e:
+        print(f"Warning: cannot read config: {e}")
+        return {}
+    # Choose parser by extension; fall back between JSON/YAML
+    suffix = path.suffix.lower()
+    if suffix in (".yaml", ".yml"):
+        try:
+            import yaml  # type: ignore
+
+            return yaml.safe_load(text) or {}
+        except Exception as e:
+            print(f"Warning: YAML config load failed: {e}")
+            try:
+                return json.loads(text)
+            except Exception:
+                return {}
+    else:
+        try:
+            return json.loads(text)
+        except Exception as e:
+            # try YAML as a fallback
+            try:
+                import yaml  # type: ignore
+
+                return yaml.safe_load(text) or {}
+            except Exception:
+                print(f"Warning: JSON config load failed: {e}")
+                return {}
+
+
+def _write_series_csv(path: Path, I: InputsI):
+    from investing_agent.kernels import ginzu as K
+    import csv
+
+    S = K.series(I)
+    rev = S.revenue
+    ebit = S.ebit
+    fcff = S.fcff
+    wacc = S.wacc
+    df = S.discount_factors
+    with path.open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["year", "revenue", "ebit", "fcff", "wacc", "df", "pv_fcff"])
+        for t in range(len(rev)):
+            w.writerow([
+                t + 1,
+                f"{float(rev[t]):.6f}",
+                f"{float(ebit[t]):.6f}",
+                f"{float(fcff[t]):.6f}",
+                f"{float(wacc[t]):.6f}",
+                f"{float(df[t]):.6f}",
+                f"{float(fcff[t]*df[t]):.6f}",
+            ])
+
+def _write_fundamentals_csv(path: Path, f):
+    import csv
+    years = set()
+    for d in [
+        f.revenue,
+        f.ebit,
+        f.dep_amort,
+        f.capex,
+        f.lease_assets,
+        f.lease_liabilities,
+        f.current_assets,
+        f.current_liabilities,
+    ]:
+        years.update(d.keys())
+    years = sorted(int(y) for y in years)
+    with path.open("w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow([
+            "year",
+            "revenue",
+            "ebit",
+            "dep_amort",
+            "capex",
+            "lease_assets",
+            "lease_liabilities",
+            "current_assets",
+            "current_liabilities",
+        ])
+        for y in years:
+            w.writerow([
+                y,
+                f.revenue.get(y, ""),
+                f.ebit.get(y, ""),
+                f.dep_amort.get(y, ""),
+                f.capex.get(y, ""),
+                f.lease_assets.get(y, ""),
+                f.lease_liabilities.get(y, ""),
+                f.current_assets.get(y, ""),
+                f.current_liabilities.get(y, ""),
+            ])
 
 
 def main():
     ap = argparse.ArgumentParser(description="Generate valuation report for a ticker.")
     ap.add_argument("ticker", nargs="?", default=os.environ.get("CT") or os.environ.get("TICKER"))
     ap.add_argument("--fresh", action="store_true", help="Bypass cached inputs and fetch live fundamentals")
+    ap.add_argument("--growth", help="Comma-separated growth overrides (e.g., '8%,7%,6%' or '0.08,0.07')")
+    ap.add_argument("--margin", help="Comma-separated margin overrides (e.g., '12%,13%' or '0.12,0.13')")
+    ap.add_argument("--s2c", help="Comma-separated sales-to-capital overrides (e.g., '2.0,2.2,2.4')")
+    ap.add_argument("--config", help="JSON file with overrides and settings (growth, margin, s2c, stable_*, beta, discounting, horizon, macro)")
+    ap.add_argument("--html", action="store_true", help="Also write HTML report next to Markdown")
     args = ap.parse_args()
     if not args.ticker:
         raise SystemExit("Provide ticker as arg or set CT/TICKER")
 
     ticker = args.ticker.upper()
+    # Load config file if provided
+    cfg = {}
+    if args.config:
+        cfg = _load_config(Path(args.config))
+
+    # Optional overrides from CLI (take precedence over config)
+    growth_path = _parse_path_arg(args.growth) or cfg.get("growth")
+    margin_path = _parse_path_arg(args.margin) or cfg.get("margin")
+    s2c_path = _parse_path_arg(args.s2c) or cfg.get("s2c")
+    cfg_horizon = int(cfg.get("horizon")) if cfg.get("horizon") else None
+    cfg_beta = float(cfg.get("beta")) if cfg.get("beta") is not None else None
+    cfg_stable_growth = cfg.get("stable_growth")
+    cfg_stable_margin = cfg.get("stable_margin")
+    cfg_discounting = cfg.get("discounting")
+    cfg_macro = cfg.get("macro") or {}
+
     # Offline-first: if local inputs exist, use them and skip network
     out_dir = Path("out") / ticker
     local_inputs = out_dir / "inputs.json"
@@ -41,6 +180,47 @@ def main():
         if not I.macro.risk_free_curve:
             I.macro.risk_free_curve = [0.03] * I.horizon()
         cf_json = {}
+        f_for_report: Fundamentals | None = None
+        cf_for_report: dict | None = None
+        # Try to load local companyfacts for a fundamentals section and to re-build with overrides if any
+        local_cf = out_dir / "companyfacts.json"
+        if local_cf.exists():
+            try:
+                cf_json_cached = json.loads(local_cf.read_text())
+                f_for_report = parse_companyfacts_to_fundamentals(cf_json_cached, ticker=ticker)
+                cf_for_report = cf_json_cached
+                # Rebuild inputs when any overrides in either CLI or config
+                if any([growth_path, margin_path, s2c_path, cfg_horizon, cfg_beta, cfg_stable_growth, cfg_stable_margin, cfg_discounting, cfg_macro]):
+                    horizon = cfg_horizon or I.horizon()
+                    # discounting
+                    disc = I.discounting
+                    if cfg_discounting in ("end", "midyear"):
+                        from investing_agent.schemas.inputs import Discounting
+
+                        disc = Discounting(mode=cfg_discounting)
+                    # macro
+                    macro = I.macro
+                    if cfg_macro:
+                        from investing_agent.schemas.inputs import Macro
+
+                        mrf = cfg_macro.get("risk_free_curve") or macro.risk_free_curve
+                        merp = cfg_macro.get("erp", macro.erp)
+                        mcr = cfg_macro.get("country_risk", macro.country_risk)
+                        macro = Macro(risk_free_curve=mrf, erp=float(merp), country_risk=float(mcr))
+                    I = build_inputs_from_fundamentals(
+                        f_for_report,
+                        horizon=horizon,
+                        stable_growth=cfg_stable_growth,
+                        stable_margin=cfg_stable_margin,
+                        beta=(cfg_beta if cfg_beta is not None else 1.0),
+                        macro=macro,
+                        discounting=disc,
+                        sales_growth_path=growth_path,
+                        oper_margin_path=margin_path,
+                        sales_to_capital_path=s2c_path,
+                    )
+            except Exception:
+                pass
     else:
         edgar_ua = os.environ.get("EDGAR_UA")
         if not edgar_ua:
@@ -58,7 +238,33 @@ def main():
         from investing_agent.schemas.inputs import Macro
 
         macro = Macro(risk_free_curve=rf_curve, erp=0.05, country_risk=0.0)
-        I = build_inputs_from_fundamentals(f, horizon=10, macro=macro)
+        horizon = cfg_horizon or 10
+        disc = None
+        if cfg_discounting in ("end", "midyear"):
+            from investing_agent.schemas.inputs import Discounting
+
+            disc = Discounting(mode=cfg_discounting)
+        if cfg_macro:
+            from investing_agent.schemas.inputs import Macro
+
+            mrf = cfg_macro.get("risk_free_curve") or macro.risk_free_curve
+            merp = cfg_macro.get("erp", macro.erp)
+            mcr = cfg_macro.get("country_risk", macro.country_risk)
+            macro = Macro(risk_free_curve=mrf, erp=float(merp), country_risk=float(mcr))
+        I = build_inputs_from_fundamentals(
+            f,
+            horizon=horizon,
+            stable_growth=cfg_stable_growth,
+            stable_margin=cfg_stable_margin,
+            beta=(cfg_beta if cfg_beta is not None else 1.0),
+            macro=macro,
+            discounting=disc,
+            sales_growth_path=growth_path,
+            oper_margin_path=margin_path,
+            sales_to_capital_path=s2c_path,
+        )
+        f_for_report = f
+        cf_for_report = cf_json
 
     V = kernel_value(I)
 
@@ -79,7 +285,7 @@ def main():
     w = np.array(I.wacc)
     drv_png = plot_driver_paths(len(g), g, m, w)
 
-    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png)
+    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, fundamentals=(f_for_report if 'f_for_report' in locals() else None))
     if last_close is not None:
         md += f"\n\n## Market\n- Last close: {last_close:,.2f}\n- Discount/Premium vs value: {(V.value_per_share/last_close - 1.0):.2%}\n"
 
@@ -89,6 +295,22 @@ def main():
     (out_dir / "report.md").write_text(md)
     (out_dir / "sensitivity.png").write_bytes(heat_png)
     (out_dir / "drivers.png").write_bytes(drv_png)
+    # Also export per-year series CSV
+    _write_series_csv(out_dir / "series.csv", I)
+
+    if args.html:
+        html_text = render_html_report(
+            I,
+            V,
+            sensitivity_png=heat_png,
+            driver_paths_png=drv_png,
+            fundamentals=(f_for_report if 'f_for_report' in locals() else None),
+            companyfacts_json=(cf_for_report if 'cf_for_report' in locals() else None),
+        )
+        (out_dir / "report.html").write_text(html_text)
+    # Fundamentals CSV
+    if 'f_for_report' in locals() and f_for_report is not None:
+        _write_fundamentals_csv(out_dir / "fundamentals.csv", f_for_report)
     print(f"Wrote report to {out_dir.resolve()}")
 
 

@@ -38,3 +38,14 @@ Reports
 - Build inputs from EDGAR and cache locally: `make build_i CT=<TICKER>`
 - Generate full report (uses cached inputs if present): `make report CT=<TICKER>`
 - Force fresh fundamentals (bypass cache): `python scripts/report.py --fresh <TICKER>`
+- Override drivers from CLI: `python scripts/report.py <TICKER> --growth '8%,7%' --margin '12%,13%' --s2c '2.0,2.2'`
+- Use JSON config for advanced settings (horizon, discounting, beta, macro, stable targets):
+  - `python scripts/report.py <TICKER> --config path/to/config.json`
+  - CLI flags take precedence over config values.
+- Export HTML (single-file) alongside Markdown: add `--html`.
+
+Artifacts
+- Markdown: `out/<TICKER>/report.md`
+- HTML (if `--html`): `out/<TICKER>/report.html`
+- Series CSV: `out/<TICKER>/series.csv`
+- Raw EDGAR companyfacts (if fetched): `out/<TICKER>/companyfacts.json`

@@ -25,3 +25,12 @@ class Fundamentals(BaseModel):
     cash_nonop: Optional[float] = 0.0
 
     sic: Optional[str] = None
+
+    # Additional parsed items (annual series) when present
+    dep_amort: Dict[int, float] = Field(default_factory=dict)
+    capex: Dict[int, float] = Field(default_factory=dict)
+    lease_assets: Dict[int, float] = Field(default_factory=dict)
+    lease_liabilities: Dict[int, float] = Field(default_factory=dict)
+    # Working capital components (annual)
+    current_assets: Dict[int, float] = Field(default_factory=dict)
+    current_liabilities: Dict[int, float] = Field(default_factory=dict)

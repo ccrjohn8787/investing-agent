@@ -26,7 +26,25 @@ def build_inputs_from_fundamentals(
     beta: float = 1.0,
     macro: Optional[Macro] = None,
     discounting: Optional[Discounting] = None,
+    # Optional user-provided paths to explicitly express views.
+    # If provided with length < horizon, the remainder will be smoothly trended
+    # to the stable target. If provided with length == horizon, it is used as-is.
+    sales_growth_path: Optional[List[float]] = None,
+    oper_margin_path: Optional[List[float]] = None,
+    sales_to_capital_path: Optional[List[float]] = None,
 ) -> InputsI:
+    """
+    Build kernel inputs from fundamentals, with optional explicit overrides for
+    growth, margin, and sales-to-capital paths so users can express judgement.
+
+    Path override rules:
+    - If an override list has len == horizon, it is used verbatim.
+    - If len < horizon, the prefix is used and the remaining years are
+      linearly trended from the last provided value to the respective stable
+      target (growth->stable_growth, margin->stable_margin, s2c->2.5 default).
+    - If an override is None or empty, a default smooth path is constructed
+      from historical estimates to the stable target.
+    """
     years = sorted(f.revenue.keys())
     rev_series = [f.revenue[y] for y in years]
     ebit_series = [f.ebit.get(y, 0.0) for y in years]
@@ -46,12 +64,32 @@ def build_inputs_from_fundamentals(
     if stable_margin is None:
         stable_margin = max(0.05, min(0.35, m0))
 
-    # Smooth paths to stable
-    sales_growth = list(np.linspace(g0, stable_growth, horizon))
-    oper_margin = list(np.linspace(m0, stable_margin, horizon))
+    # Helper to merge optional override with smooth trend to a target
+    def _merge_path(prefix: Optional[List[float]], start: float, target: float, n: int) -> List[float]:
+        if prefix is None or len(prefix) == 0:
+            return list(np.linspace(start, target, n))
+        if len(prefix) >= n:
+            return list(prefix[:n])
+        k = len(prefix)
+        tail = list(np.linspace(prefix[-1], target, n - k))
+        return list(prefix + tail)
 
-    # Sales to capital: default 2.0 trending to 2.5
-    sales_to_capital = list(np.linspace(2.0, 2.5, horizon))
+    # Smooth/default paths to stable, then apply overrides
+    default_sales_growth = list(np.linspace(g0, stable_growth, horizon))
+    default_oper_margin = list(np.linspace(m0, stable_margin, horizon))
+    default_s2c = list(np.linspace(2.0, 2.5, horizon))
+
+    sales_growth = _merge_path(sales_growth_path, g0, float(stable_growth), horizon)
+    oper_margin = _merge_path(oper_margin_path, m0, float(stable_margin), horizon)
+    sales_to_capital = _merge_path(sales_to_capital_path, 2.0, 2.5, horizon)
+
+    # If no overrides were provided at all, keep deterministic defaults
+    if sales_growth_path is None:
+        sales_growth = default_sales_growth
+    if oper_margin_path is None:
+        oper_margin = default_oper_margin
+    if sales_to_capital_path is None:
+        sales_to_capital = default_s2c
 
     # WACC path from macro: rf + ERP * beta; no leverage adj yet
     if macro is None:

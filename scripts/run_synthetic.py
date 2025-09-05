@@ -40,7 +40,7 @@ def main():
     w = np.array(I.wacc)
     drv_png = plot_driver_paths(len(g), g, m, w)
 
-    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png)
+    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, fundamentals=f)
 
     out = Path("out")
     out.mkdir(exist_ok=True)
@@ -52,4 +52,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
