@@ -25,7 +25,7 @@ This roadmap captures the end goal, success criteria, milestones, and current st
 - M1 Reports v1: per‑year detail, terminal breakdown, charts, fundamentals section — DONE
 - M2 Audit & provenance: `run.jsonl` event log + `manifest.json` with EDGAR snapshot — DONE
 - M3 Algorithm plan + agent rules: `docs/ALGORITHM.md`, `AGENTS.md` — DONE
-- M4 Deterministic router (rule‑based) returning next step + guards — PENDING
+- M4 Deterministic router (rule‑based) returning next step + guards — DONE
 - M5 Agents v1 (code‑only): market/consensus/comparables bounded transforms — PENDING
 - M6 News v1: deterministic retrieval; bounded ingest; optional deterministic summary — PENDING
 - M7 Manifest snapshots extended: add UST and prices (URL + meta; hash when available) — PARTIAL (URL recorded)
@@ -54,4 +54,3 @@ This roadmap captures the end goal, success criteria, milestones, and current st
 ### Keeping This Updated
 - Update this file when milestones are completed or re‑scoped (PRs should reference a milestone ID).
 - Consider a lightweight CHANGELOG and GitHub project board to mirror milestones.
-

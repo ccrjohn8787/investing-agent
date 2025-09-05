@@ -25,3 +25,6 @@ build_i:
 
 report:
 	CT=$(CT) python scripts/report.py
+
+router_demo:
+	python scripts/router_demo.py
