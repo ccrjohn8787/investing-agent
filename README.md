@@ -10,6 +10,9 @@ Determinism
 - Future LLM usage will fix temp=0, top_p=1, seed.
 - All artifacts carry source URLs and content hashes.
 
+Math
+- See `docs/VALUATION_MATH.md` for equations and the end-to-end PV and equity bridge.
+
 Structure
 - `investing_agent/schemas`: Typed objects for inputs, outputs, and fundamentals.
 - `investing_agent/kernels`: Valuation kernel (Ginzu) pure NumPy + public `series()` API for per‑year arrays.
@@ -17,6 +20,7 @@ Structure
 - `investing_agent/connectors`: EDGAR (US‑GAAP + IFRS fallbacks), Stooq/Yahoo (prices), UST (risk‑free).
 - `scripts`: Demo and reporting CLI with overrides/config.
 - `tests`: Unit tests for kernel, connectors, sensitivity, writers, and CLI helpers.
+- `AGENTS.md`: Rules and contracts for agent design and LLM boundaries.
 
 Getting Started
 - Create a virtual environment and install dev deps:
