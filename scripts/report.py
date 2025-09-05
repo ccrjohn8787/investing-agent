@@ -16,14 +16,20 @@ from investing_agent.connectors.edgar import (
     parse_companyfacts_to_fundamentals,
 )
 from investing_agent.connectors.stooq import fetch_prices as fetch_prices_stooq
+from investing_agent.connectors.stooq import _stooq_url_us as _stooq_url_us  # internal helper
 from investing_agent.connectors.yahoo import fetch_prices_v8_chart
 from investing_agent.connectors.ust import (
     build_risk_free_curve_from_ust,
     fetch_treasury_yield_csv,
 )
+from investing_agent.connectors import ust as ust_mod
 from investing_agent.kernels.ginzu import value as kernel_value
 from investing_agent.schemas.inputs import InputsI
 from investing_agent.schemas.fundamentals import Fundamentals
+from investing_agent.orchestration.eventlog import EventLog
+from investing_agent.orchestration.manifest import Manifest, Snapshot
+import time as _time
+import hashlib as _hashlib
 
 
 def _parse_path_arg(s: str | None) -> list[float] | None:
@@ -156,6 +162,7 @@ def main():
         raise SystemExit("Provide ticker as arg or set CT/TICKER")
 
     ticker = args.ticker.upper()
+    run_id = _time.strftime("%Y%m%dT%H%M%SZ", _time.gmtime())
     # Load config file if provided
     cfg = {}
     if args.config:
@@ -175,6 +182,8 @@ def main():
     # Offline-first: if local inputs exist, use them and skip network
     out_dir = Path("out") / ticker
     local_inputs = out_dir / "inputs.json"
+    eventlog = EventLog(out_dir / "run.jsonl")
+    manifest = Manifest(run_id=run_id, ticker=ticker, asof=None)
     if local_inputs.exists() and not args.fresh:
         I = InputsI.model_validate_json(local_inputs.read_text())
         if not I.macro.risk_free_curve:
@@ -227,11 +236,19 @@ def main():
             print("Warning: EDGAR_UA not set; SEC requests may be blocked.")
 
         # Fetch fundamentals
+        t0 = _time.time()
         cf_json, meta = fetch_companyfacts(ticker, edgar_ua=edgar_ua)
+        eventlog.log(agent="fetch_fundamentals", params={"ticker": ticker}, outputs=meta, duration_ms=int((_time.time()-t0)*1000))
+        manifest.add_snapshot(Snapshot(source="edgar", url=meta.get("source_url"), retrieved_at=meta.get("retrieved_at"), content_sha256=meta.get("content_sha256")))
         f = parse_companyfacts_to_fundamentals(cf_json, ticker=ticker)
 
         # Macro risk-free from UST latest 10Y
         rows = fetch_treasury_yield_csv()
+        # Snapshot UST source in manifest (best-effort; content hash not available here)
+        try:
+            manifest.add_snapshot(Snapshot(source="ust", url=ust_mod.TREASURY_YIELD_CSV, retrieved_at=None, content_sha256=None))
+        except Exception:
+            pass
         rf_curve = build_risk_free_curve_from_ust(rows, horizon=10)
 
         # Build inputs with macro so WACC path reflects latest rf
@@ -251,6 +268,7 @@ def main():
             merp = cfg_macro.get("erp", macro.erp)
             mcr = cfg_macro.get("country_risk", macro.country_risk)
             macro = Macro(risk_free_curve=mrf, erp=float(merp), country_risk=float(mcr))
+        t0 = _time.time()
         I = build_inputs_from_fundamentals(
             f,
             horizon=horizon,
@@ -263,20 +281,40 @@ def main():
             oper_margin_path=margin_path,
             sales_to_capital_path=s2c_path,
         )
+        eventlog.log(agent="build_inputs", params={"horizon": horizon}, inputs=f.model_dump(), outputs=I.model_dump(), duration_ms=int((_time.time()-t0)*1000))
+        manifest.add_artifact("inputs", I.model_dump())
         f_for_report = f
         cf_for_report = cf_json
 
+    t0 = _time.time()
     V = kernel_value(I)
+    eventlog.log(agent="valuation", inputs=I.model_dump(), outputs=V.model_dump(), duration_ms=int((_time.time()-t0)*1000))
+    manifest.add_artifact("valuation", V.model_dump())
 
-    # Try prices via Stooq; fallback to Yahoo
+    # Try prices via Stooq; fallback to Yahoo, logging and snapshotting the source
     try:
+        t0 = _time.time()
         ps = fetch_prices_stooq(ticker)
+        eventlog.log(agent="prices", params={"source": "stooq"}, outputs={"bars": len(ps.bars)}, duration_ms=int((_time.time()-t0)*1000))
+        try:
+            manifest.add_snapshot(Snapshot(source="stooq", url=_stooq_url_us(ticker), retrieved_at=None, content_sha256=None))
+        except Exception:
+            pass
     except Exception:
+        t0 = _time.time()
         ps = fetch_prices_v8_chart(ticker)
+        eventlog.log(agent="prices", params={"source": "yahoo"}, outputs={"bars": len(ps.bars)}, duration_ms=int((_time.time()-t0)*1000))
+        try:
+            y_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?range=1y&interval=1d"
+            manifest.add_snapshot(Snapshot(source="yahoo", url=y_url, retrieved_at=None, content_sha256=None))
+        except Exception:
+            pass
     last_close = ps.bars[-1].close if ps.bars else None
 
+    t0 = _time.time()
     sens = compute_sensitivity(I, growth_delta=0.02, margin_delta=0.01, steps=(5, 5))
     heat_png = plot_sensitivity_heatmap(sens, title=f"Sensitivity — {ticker}")
+    eventlog.log(agent="sensitivity", params={"steps": (5,5)}, outputs={"grid": [len(sens.margin_axis), len(sens.growth_axis)]}, duration_ms=int((_time.time()-t0)*1000))
 
     import numpy as np
 
@@ -285,7 +323,9 @@ def main():
     w = np.array(I.wacc)
     drv_png = plot_driver_paths(len(g), g, m, w)
 
+    t0 = _time.time()
     md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, fundamentals=(f_for_report if 'f_for_report' in locals() else None))
+    eventlog.log(agent="writer_md", outputs={"bytes": len(md.encode('utf-8'))}, duration_ms=int((_time.time()-t0)*1000))
     if last_close is not None:
         md += f"\n\n## Market\n- Last close: {last_close:,.2f}\n- Discount/Premium vs value: {(V.value_per_share/last_close - 1.0):.2%}\n"
 
@@ -293,10 +333,15 @@ def main():
     if cf_json:
         (out_dir / "companyfacts.json").write_text(json.dumps(cf_json))
     (out_dir / "report.md").write_text(md)
+    manifest.add_artifact("report.md", md)
     (out_dir / "sensitivity.png").write_bytes(heat_png)
     (out_dir / "drivers.png").write_bytes(drv_png)
     # Also export per-year series CSV
     _write_series_csv(out_dir / "series.csv", I)
+    try:
+        manifest.add_artifact("series.csv", (out_dir / "series.csv").read_bytes())
+    except Exception:
+        pass
 
     if args.html:
         html_text = render_html_report(
@@ -308,9 +353,16 @@ def main():
             companyfacts_json=(cf_for_report if 'cf_for_report' in locals() else None),
         )
         (out_dir / "report.html").write_text(html_text)
+        manifest.add_artifact("report.html", html_text)
     # Fundamentals CSV
     if 'f_for_report' in locals() and f_for_report is not None:
         _write_fundamentals_csv(out_dir / "fundamentals.csv", f_for_report)
+        try:
+            manifest.add_artifact("fundamentals.csv", (out_dir / "fundamentals.csv").read_bytes())
+        except Exception:
+            pass
+    # Write manifest
+    manifest.write(out_dir / "manifest.json")
     print(f"Wrote report to {out_dir.resolve()}")
 
 

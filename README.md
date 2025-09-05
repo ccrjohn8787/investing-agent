@@ -13,6 +13,9 @@ Determinism
 Math
 - See `docs/VALUATION_MATH.md` for equations and the end-to-end PV and equity bridge.
 
+Algorithm
+- See `docs/ALGORITHM.md` for the paper-aligned end-to-end algorithm, module bindings, and router loop.
+
 Structure
 - `investing_agent/schemas`: Typed objects for inputs, outputs, and fundamentals.
 - `investing_agent/kernels`: Valuation kernel (Ginzu) pure NumPy + public `series()` API for per‑year arrays.
