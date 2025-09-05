@@ -1,5 +1,28 @@
 from __future__ import annotations
 
+"""
+Valuation kernel ("Ginzu")
+
+Notation
+- R_t: revenue at year t; g_t: sales growth in year t; m_t: operating margin in year t
+- EBIT_t = m_t * R_t
+- τ: tax rate; NOPAT_t = EBIT_t * (1 - τ)
+- σ_t: sales_to_capital ratio; Reinv_t = max((R_t - R_{t-1}) / σ_t, 0)  # σ-mode
+- FCFF_t = NOPAT_t - Reinv_t
+
+Discounting
+- WACC_t from macro and structure; end-year or mid-year toggle
+- PV = Σ_{t=1..T} FCFF_t / Π_{k=1..t}(1+WACC_k)  [mid-year applies 0.5 shift]
+
+Terminal
+- FCFF_{T+1} = NOPAT_{T+1} - (R_{T+1}-R_T)/σ_T  (σ at terminal)
+- TV_T = FCFF_{T+1} / (WACC_∞ - g_∞), with g_∞ < WACC_∞ - 50bps
+
+Bridges
+- PV_ops = PV_explicit + PV_terminal
+- Equity = PV_ops - NetDebt + NonOpCash; Value_per_share = Equity / Shares
+"""
+
 import numpy as np
 
 from investing_agent.schemas.inputs import InputsI

@@ -41,3 +41,5 @@ venv/
 
 # Project artifacts
 out/
+.cache/
+.mplcache/
