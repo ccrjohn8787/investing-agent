@@ -1,0 +1,25 @@
+{
+  "name": "writer_simple_sections_json",
+  "agent": "writer",
+  "params": {
+    "company": "EvalCo",
+    "ticker": "EVAL",
+    "currency": "USD",
+    "shares_out": 1000,
+    "tax_rate": 0.25,
+    "revenue": {"2022": 800, "2023": 1000},
+    "ebit": {"2022": 80, "2023": 110},
+    "horizon": 4
+  },
+  "checks": {
+    "contains": [
+      "## Per-Year Detail",
+      "## Terminal Value",
+      "Value per share:",
+      "PV (explicit):",
+      "PV (terminal):"
+    ],
+    "not_contains": ["NaN", "Infinity"]
+  }
+}
+

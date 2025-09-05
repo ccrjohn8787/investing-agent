@@ -1,8 +1,21 @@
 venv:
 	python -m venv .venv && . .venv/bin/activate && pip install -e .[dev]
 
+.PHONY: test lint fmt ci
 test:
 	pytest -q
+
+lint:
+	ruff check .
+
+fmt:
+	ruff format .
+
+ci:
+	ruff check . && mypy investing_agent && pytest -q
+
+eval:
+	pytest -q -m eval
 
 demo:
 	python scripts/run_synthetic.py

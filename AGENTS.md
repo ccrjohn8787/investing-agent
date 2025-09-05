@@ -33,6 +33,11 @@ Every agent must declare a clear contract:
 - Integration tests should cover end‑to‑end flows across multiple agents.
 - Maintain golden fixtures for canary tickers/runs to detect regressions.
 
+### Eval‑First Requirement (LLM‑adjacent agents)
+- No eval, no agent: before implementing or changing an agent that consumes or produces LLM output (News, Writer, Critic, Router when LLM‑assisted), add eval cases under `evals/<agent>/cases/` and a pytest wrapper under `tests/evals/`.
+- Evals define expected behaviors and pass thresholds (e.g., citation coverage, forbidden content rules, structure checks). CI will run `pytest -m eval` and block merges on failures.
+- LLM calls in evals must use cassettes (no live calls in CI). Include model id and parameters in the cassette metadata and manifest when applicable.
+
 ### Failure Policy
 - On upstream failures (network, parse, rate limit), degrade gracefully:
   - Prefer previously cached inputs/artifacts if available.
@@ -98,4 +103,3 @@ Use this template when creating or updating an agent.
 - Logging: `eventlog` entries `writer_md` / `writer_html` with byte counts and duration.
 - Tests: `tests/unit/test_builder_overrides_and_writer.py` (sections appear), `tests/unit/test_html_and_cli_parse.py` (HTML sections present).
 - Failure: If charts/fundamentals absent, degrade gracefully (omit sections) and annotate.
-
