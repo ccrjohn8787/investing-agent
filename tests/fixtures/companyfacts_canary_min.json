@@ -1,0 +1,38 @@
+{
+  "entityName": "Canary Corp",
+  "facts": {
+    "us-gaap": {
+      "Revenues": {
+        "units": {
+          "USD": [
+            {"fy": 2022, "fp": "FY", "val": 1000, "end": "2022-12-31"},
+            {"fy": 2023, "fp": "FY", "val": 1100, "end": "2023-12-31"}
+          ]
+        }
+      },
+      "OperatingIncomeLoss": {
+        "units": {
+          "USD": [
+            {"fy": 2022, "fp": "FY", "val": 150, "end": "2022-12-31"},
+            {"fy": 2023, "fp": "FY", "val": 200, "end": "2023-12-31"}
+          ]
+        }
+      },
+      "CommonStockSharesOutstanding": {
+        "units": {
+          "shares": [
+            {"fy": 2023, "fp": "FY", "val": 1000, "end": "2023-12-31"}
+          ]
+        }
+      },
+      "EffectiveIncomeTaxRate": {
+        "units": {
+          "pure": [
+            {"fy": 2023, "fp": "FY", "val": 0.25, "end": "2023-12-31"}
+          ]
+        }
+      }
+    }
+  }
+}
+
