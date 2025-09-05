@@ -16,6 +16,9 @@ Math
 Algorithm
 - See `docs/ALGORITHM.md` for the paper-aligned end-to-end algorithm, module bindings, and router loop.
 
+Roadmap
+- See `docs/ROADMAP.md` for milestones, success criteria, and current status.
+
 Structure
 - `investing_agent/schemas`: Typed objects for inputs, outputs, and fundamentals.
 - `investing_agent/kernels`: Valuation kernel (Ginzu) pure NumPy + public `series()` API for per‑year arrays.
