@@ -1,25 +1,43 @@
+############################
+# Clean .gitignore
+############################
+
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
-
-# Envs
-.venv/
-env/
-venv/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
 
 # Build/Dist
 build/
 dist/
 *.egg-info/
 
-# Artifacts
-*.png
-*.pdf
-*.csv
-*.parquet
-*.jsonl
+# Envs
+.venv/
+.venv*/
+env/
+venv/
 
-# Local config
+# IDE/editor
+.vscode/
+.idea/
+
+# Tools
+.pdm-python
+.pixi
+.pytype/
+.pyre/
+.ipynb_checkpoints
+
+# OS/files
+.DS_Store
+.pypirc
 .env
+.envrc
 
+# Project artifacts
+out/

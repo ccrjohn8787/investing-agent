@@ -11,13 +11,30 @@ Determinism
 - All artifacts carry source URLs and content hashes.
 
 Structure
-- investing_agent/schemas: Typed objects for inputs and outputs.
-- investing_agent/kernels: Valuation kernel (ginzu) pure NumPy.
-- tests: Unit and integration tests for kernel correctness and determinism.
+- `investing_agent/schemas`: Typed objects for inputs and outputs.
+- `investing_agent/kernels`: Valuation kernel (ginzu) pure NumPy.
+- `investing_agent/agents`: Input builder, sensitivity, plotting, writer, critic.
+- `investing_agent/connectors`: EDGAR, Stooq, Yahoo, UST.
+- `tests`: Unit tests for kernel, connectors, sensitivity.
 
 Getting Started
 - Create a virtual environment and install dev deps:
-  python -m venv .venv && . .venv/bin/activate
-  pip install -e .[dev]
-- Run tests: pytest -q
+  - `python -m venv .venv && . .venv/bin/activate`
+  - `pip install -e .[dev]`
+- Run tests: `pytest -q`
 
+Demo (no network required)
+- Generate a synthetic end-to-end report and plots:
+  - `make demo`
+  - Outputs under `./out/`: `SYN_report.md`, `SYN_sensitivity.png`, `SYN_drivers.png`
+
+Connectors (when fetching live data)
+- EDGAR requires a User-Agent per SEC rules. Example:
+  - `export EDGAR_UA="you@example.com Investing-Agent/0.1"`
+- Prices via Stooq use CSV; no key required.
+- Network calls are not used in the demo; connectors are implemented for later use.
+
+Reports
+- Build inputs from EDGAR and cache locally: `make build_i CT=<TICKER>`
+- Generate full report (uses cached inputs if present): `make report CT=<TICKER>`
+- Force fresh fundamentals (bypass cache): `python scripts/report.py --fresh <TICKER>`
