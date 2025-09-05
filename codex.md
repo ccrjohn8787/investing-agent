@@ -20,20 +20,17 @@ Planned Structure
 - investing_agent/schemas, investing_agent/kernels, connectors, agents, orchestration, scripts, fixtures, tests.
 
 Status
-- Kernel implemented: investing_agent/kernels/ginzu.py with σ-based reinvestment, end/mid-year, terminal constraint, equity bridge, per-share value.
-- Schemas: InputsI, ValuationV. Tests: PV bridge, mid-year uplift band, gradient signs, terminal constraint.
+- Kernel implemented: `investing_agent/kernels/ginzu.py` with σ-based reinvestment, end/mid-year, terminal constraint, equity bridge, per-share value. Public `series()` API for per-year arrays and TV.
+- Schemas: InputsI, ValuationV, Fundamentals (extended: D&A, capex, leases, working capital). Tests: PV bridge, mid-year uplift band, gradients, terminal constraint, writers, EDGAR/IFRS parsing, YAML config.
 
 Next Milestones
-1) Connectors (EDGAR/Yahoo/Stooq + snapshots + provenance)
-2) DC→I builder
-3) Sensitivity + plotting
-4) Writer + Critic
-5) Consensus + Comparables v1
-6) News v1
-7) Supervisor + router + manifest
-8) Golden fixtures + CI
+1) Comparables + consensus blocks in the report (peer stats, simple comps)
+2) Working capital deltas from cash flow when tags present; improved capex/leases modeling
+3) WACC leverage modeling (target gearing, tax shield) and country add-ons
+4) HTML exporter theming and PDF option
+5) Router + manifest + golden fixtures + CI
 
 Open Items
-- Provide EDGAR_UA email string for SEC requests.
+- Provide `EDGAR_UA` email string for SEC requests.
+- Optional: install `pyyaml` for YAML config support.
 - Confirm OpenAI model/key availability (or skip LLM until report stage).
-
