@@ -38,6 +38,20 @@ Every agent must declare a clear contract:
 - Evals define expected behaviors and pass thresholds (e.g., citation coverage, forbidden content rules, structure checks). CI will run `pytest -m eval` and block merges on failures.
 - LLM calls in evals must use cassettes (no live calls in CI). Include model id and parameters in the cassette metadata and manifest when applicable.
 
+### Prompts & Models (Design and Governance)
+- Prompts and model choices are product surface area:
+  - Store prompts under `prompts/<agent>/` and document them in `docs/PROMPTS.md`.
+  - Pin model IDs (e.g., `gpt-4.1-mini`) and parameters (`temperature=0`, `top_p=1`, `seed=2025`).
+  - Record model ids/params in the run manifest (`models` block) and in eval cassettes.
+- PR requirements for prompt/model changes:
+  - Update or add eval cases demonstrating intended behavior and thresholds.
+  - Include diffs to prompt files and a summary of changes in the PR description.
+  - Attach or paste eval results (pass/fail deltas) and note any threshold adjustments.
+  - Seek explicit reviewer sign‑off for prompt changes (`@maintainers`), even if code is unchanged.
+- Determinism:
+  - All LLM calls configured with deterministic params; any use of sampling or tools must still be reproducible and captured in cassettes.
+  - Numeric outputs from LLMs are advisory only; conversions into `InputsI` must pass code validation and bounds.
+
 ### Failure Policy
 - On upstream failures (network, parse, rate limit), degrade gracefully:
   - Prefer previously cached inputs/artifacts if available.
