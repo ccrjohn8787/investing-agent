@@ -80,6 +80,20 @@ Use this template when creating or updating an agent.
 
 ## Existing Agents
 
+### Contribution & Review Policy (Git Workflow)
+- No pushes to any remote (e.g., `origin`) without explicit approval from the maintainer (you) or a designated reviewer. The assistant MUST NOT execute `git push` unless explicitly instructed in the session.
+- Default workflow:
+  - Develop changes on a feature branch (not `main`).
+  - Make focused commits locally and open a Pull Request (PR).
+  - Attach eval results (including `pytest -m eval`), CI status, and a brief summary of changes.
+  - Request approval from the maintainer or another designated agent/reviewer.
+- Merges to `main` only after:
+  - Reviewer approval.
+  - All CI checks (lint, mypy, unit tests, evals) pass.
+  - Any prompt/model changes include updated evals and cassettes per policy.
+- Direct commits to `main` are prohibited.
+- For agent operations: never call `git push` or set upstream without explicit approval in the session. When in doubt, stop and ask.
+
 ### Valuation (Builder)
 - Name: Valuation Builder (`investing_agent/agents/valuation.py::build_inputs_from_fundamentals`)
 - Purpose: Converts parsed fundamentals and macro settings into kernel `InputsI` with optional user‑provided driver paths.
