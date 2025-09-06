@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 from datetime import datetime
+import hashlib
 from io import StringIO
 from typing import Dict, List, Optional
 
@@ -40,6 +41,31 @@ def fetch_treasury_yield_csv(url: str = TREASURY_YIELD_CSV, session: Optional[re
             continue
     # If all attempts fail, return empty list; downstream uses defaults
     return []
+
+
+def fetch_treasury_yield_csv_with_meta(url: str = TREASURY_YIELD_CSV, session: Optional[requests.Session] = None) -> tuple[List[dict], dict]:
+    """
+    Like fetch_treasury_yield_csv, but also returns a meta dict with {url, retrieved_at, content_sha256}.
+    On failure, returns ([], {url, retrieved_at, content_sha256: None}).
+    """
+    sess = session or requests.Session()
+    urls = [url] + TREASURY_YIELD_FALLBACKS
+    for u in urls:
+        try:
+            resp = sess.get(u, timeout=30)
+            resp.raise_for_status()
+            text = resp.text
+            reader = csv.DictReader(StringIO(text))
+            rows = [r for r in reader]
+            meta = {
+                "url": u,
+                "retrieved_at": datetime.utcnow().isoformat() + "Z",
+                "content_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+            }
+            return rows, meta
+        except Exception:
+            continue
+    return [], {"url": url, "retrieved_at": datetime.utcnow().isoformat() + "Z", "content_sha256": None}
 
 
 def latest_yield_curve(rows: List[dict]) -> Dict[str, float]:

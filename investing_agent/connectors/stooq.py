@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 from datetime import datetime
+import hashlib
 from io import StringIO
 from typing import Optional
 
@@ -41,3 +42,20 @@ def fetch_prices(ticker: str, session: Optional[requests.Session] = None) -> Pri
             continue
     return PriceSeries(ticker=ticker.upper(), bars=bars)
 
+
+def fetch_prices_with_meta(ticker: str, session: Optional[requests.Session] = None) -> tuple[PriceSeries, dict]:
+    """
+    Fetch Stooq CSV and return (PriceSeries, meta) where meta includes {url, retrieved_at, content_sha256}.
+    """
+    url = _stooq_url_us(ticker)
+    sess = session or requests.Session()
+    resp = sess.get(url, timeout=30)
+    resp.raise_for_status()
+    text = resp.text
+    ps = fetch_prices(ticker, session=sess)
+    meta = {
+        "url": url,
+        "retrieved_at": datetime.utcnow().isoformat() + "Z",
+        "content_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+    }
+    return ps, meta

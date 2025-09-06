@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
 from typing import Optional
 
 import requests
@@ -43,3 +44,16 @@ def fetch_prices_v8_chart(ticker: str, range_: str = "1y", interval: str = "1d",
         )
     return PriceSeries(ticker=ticker.upper(), bars=bars)
 
+
+def fetch_prices_v8_chart_with_meta(ticker: str, range_: str = "1y", interval: str = "1d", session: Optional[requests.Session] = None) -> tuple[PriceSeries, dict]:
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?range={range_}&interval={interval}"
+    sess = session or requests.Session()
+    resp = sess.get(url, timeout=30)
+    resp.raise_for_status()
+    ps = fetch_prices_v8_chart(ticker, range_=range_, interval=interval, session=sess)
+    meta = {
+        "url": url,
+        "retrieved_at": datetime.utcnow().isoformat() + "Z",
+        "content_sha256": hashlib.sha256(resp.text.encode("utf-8")).hexdigest(),
+    }
+    return ps, meta

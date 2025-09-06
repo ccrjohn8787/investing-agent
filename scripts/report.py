@@ -17,10 +17,13 @@ from investing_agent.connectors.edgar import (
 )
 from investing_agent.connectors.stooq import fetch_prices as fetch_prices_stooq
 from investing_agent.connectors.stooq import _stooq_url_us as _stooq_url_us  # internal helper
+from investing_agent.connectors.stooq import fetch_prices_with_meta as fetch_prices_stooq_with_meta
 from investing_agent.connectors.yahoo import fetch_prices_v8_chart
+from investing_agent.connectors.yahoo import fetch_prices_v8_chart_with_meta
 from investing_agent.connectors.ust import (
     build_risk_free_curve_from_ust,
     fetch_treasury_yield_csv,
+    fetch_treasury_yield_csv_with_meta,
 )
 from investing_agent.connectors import ust as ust_mod
 from investing_agent.kernels.ginzu import value as kernel_value
@@ -242,13 +245,9 @@ def main():
         manifest.add_snapshot(Snapshot(source="edgar", url=meta.get("source_url"), retrieved_at=meta.get("retrieved_at"), content_sha256=meta.get("content_sha256")))
         f = parse_companyfacts_to_fundamentals(cf_json, ticker=ticker)
 
-        # Macro risk-free from UST latest 10Y
-        rows = fetch_treasury_yield_csv()
-        # Snapshot UST source in manifest (best-effort; content hash not available here)
-        try:
-            manifest.add_snapshot(Snapshot(source="ust", url=ust_mod.TREASURY_YIELD_CSV, retrieved_at=None, content_sha256=None))
-        except Exception:
-            pass
+        # Macro risk-free from UST latest 10Y with metadata
+        rows, ust_meta = fetch_treasury_yield_csv_with_meta()
+        manifest.add_snapshot(Snapshot(source="ust", url=ust_meta.get("url"), retrieved_at=ust_meta.get("retrieved_at"), content_sha256=ust_meta.get("content_sha256")))
         rf_curve = build_risk_free_curve_from_ust(rows, horizon=10)
 
         # Build inputs with macro so WACC path reflects latest rf
@@ -291,24 +290,19 @@ def main():
     eventlog.log(agent="valuation", inputs=I.model_dump(), outputs=V.model_dump(), duration_ms=int((_time.time()-t0)*1000))
     manifest.add_artifact("valuation", V.model_dump())
 
-    # Try prices via Stooq; fallback to Yahoo, logging and snapshotting the source
+    # Try prices via Stooq; fallback to Yahoo, with snapshot metadata
+    stooq_meta = None
+    yahoo_meta = None
     try:
         t0 = _time.time()
-        ps = fetch_prices_stooq(ticker)
+        ps, stooq_meta = fetch_prices_stooq_with_meta(ticker)
         eventlog.log(agent="prices", params={"source": "stooq"}, outputs={"bars": len(ps.bars)}, duration_ms=int((_time.time()-t0)*1000))
-        try:
-            manifest.add_snapshot(Snapshot(source="stooq", url=_stooq_url_us(ticker), retrieved_at=None, content_sha256=None))
-        except Exception:
-            pass
+        manifest.add_snapshot(Snapshot(source="stooq", url=stooq_meta.get("url"), retrieved_at=stooq_meta.get("retrieved_at"), content_sha256=stooq_meta.get("content_sha256")))
     except Exception:
         t0 = _time.time()
-        ps = fetch_prices_v8_chart(ticker)
+        ps, yahoo_meta = fetch_prices_v8_chart_with_meta(ticker)
         eventlog.log(agent="prices", params={"source": "yahoo"}, outputs={"bars": len(ps.bars)}, duration_ms=int((_time.time()-t0)*1000))
-        try:
-            y_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?range=1y&interval=1d"
-            manifest.add_snapshot(Snapshot(source="yahoo", url=y_url, retrieved_at=None, content_sha256=None))
-        except Exception:
-            pass
+        manifest.add_snapshot(Snapshot(source="yahoo", url=yahoo_meta.get("url"), retrieved_at=yahoo_meta.get("retrieved_at"), content_sha256=yahoo_meta.get("content_sha256")))
     last_close = ps.bars[-1].close if ps.bars else None
 
     t0 = _time.time()
@@ -323,8 +317,28 @@ def main():
     w = np.array(I.wacc)
     drv_png = plot_driver_paths(len(g), g, m, w)
 
+    # Build citations for report
+    citations: list[str] = []
+    try:
+        if cf_json:
+            citations.append(f"EDGAR companyfacts: {meta.get('source_url')} (sha: {meta.get('content_sha256')})")
+    except Exception:
+        pass
+    try:
+        if 'ust_meta' in locals() and ust_meta:
+            citations.append(f"UST yields: {ust_meta.get('url')} (sha: {ust_meta.get('content_sha256')})")
+    except Exception:
+        pass
+    try:
+        if stooq_meta:
+            citations.append(f"Stooq prices: {stooq_meta.get('url')} (sha: {stooq_meta.get('content_sha256')})")
+        elif yahoo_meta:
+            citations.append(f"Yahoo prices: {yahoo_meta.get('url')} (sha: {yahoo_meta.get('content_sha256')})")
+    except Exception:
+        pass
+
     t0 = _time.time()
-    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, fundamentals=(f_for_report if 'f_for_report' in locals() else None))
+    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, citations=citations, fundamentals=(f_for_report if 'f_for_report' in locals() else None))
     eventlog.log(agent="writer_md", outputs={"bytes": len(md.encode('utf-8'))}, duration_ms=int((_time.time()-t0)*1000))
     if last_close is not None:
         md += f"\n\n## Market\n- Last close: {last_close:,.2f}\n- Discount/Premium vs value: {(V.value_per_share/last_close - 1.0):.2%}\n"
