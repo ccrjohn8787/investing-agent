@@ -16,6 +16,7 @@ from investing_agent.kernels.ginzu import value as kernel_value
 from investing_agent.schemas.fundamentals import Fundamentals
 from investing_agent.agents.consensus import apply as consensus_apply
 from investing_agent.agents.comparables import apply as comparables_apply
+from investing_agent.agents.market import apply as market_apply
 
 
 @dataclass
@@ -170,6 +171,53 @@ def run_comparables_case(case: EvalCase) -> EvalResult:
     return EvalResult(name=case.name, passed=len(failures) == 0, failures=failures, details={})
 
 
+def run_market_case(case: EvalCase) -> EvalResult:
+    p = case.params
+    f = Fundamentals(
+        company=p.get("company", "EvalCo"),
+        ticker=p.get("ticker", "EVAL"),
+        currency=p.get("currency", "USD"),
+        revenue={2023: float(p.get("revenue_t0", 1000.0))},
+        ebit={2023: float(p.get("ebit_t0", 120.0))},
+        shares_out=float(p.get("shares_out", 1000.0)),
+        tax_rate=float(p.get("tax_rate", 0.25)),
+    )
+    horizon = int(p.get("horizon", 6))
+    I = build_inputs_from_fundamentals(f, horizon=horizon)
+    # Optional override base stable margin
+    if "stable_margin" in p:
+        I.drivers.stable_margin = float(p["stable_margin"])
+    cap_bps = float(p.get("cap_bps", 100))
+    target_mode = p.get("target_mode")
+    if target_mode == "sm_cap":
+        # Compute target as valuation with stable margin moved by cap in given direction
+        direction = p.get("direction", "up")
+        cap = cap_bps / 10000.0
+        sm0 = float(I.drivers.stable_margin)
+        sm_target = sm0 + (cap if direction == "up" else -cap)
+        sm_target = max(0.05, min(0.35, sm_target))
+        K = I.model_copy(deep=True)
+        K.drivers.stable_margin = sm_target
+        target_price = kernel_value(K).value_per_share
+    else:
+        target_price = float(p.get("target_price", 0.0))
+
+    J = market_apply(I, context={"target_price": target_price, "cap_bps": cap_bps})
+    Vj = kernel_value(J)
+    tol = float(case.checks.get("tol", 1e-6))
+    failures: List[str] = []
+    # Check relative error to target
+    if target_price != 0:
+        rel = abs(Vj.value_per_share - target_price) / abs(target_price)
+        if rel > tol:
+            failures.append(f"target mismatch: got {Vj.value_per_share:.6f}, target {target_price:.6f}")
+    # Check stable margin moved no more than cap
+    cap = cap_bps / 10000.0
+    if abs(J.drivers.stable_margin - I.drivers.stable_margin) - cap > 1e-9:
+        failures.append("stable_margin moved beyond cap")
+    return EvalResult(name=case.name, passed=len(failures) == 0, failures=failures, details={})
+
+
 def run_case(path: Path) -> EvalResult:
     case = load_case(path)
     if case.agent == "writer":
@@ -178,4 +226,6 @@ def run_case(path: Path) -> EvalResult:
         return run_consensus_case(case)
     if case.agent == "comparables":
         return run_comparables_case(case)
+    if case.agent == "market":
+        return run_market_case(case)
     raise NotImplementedError(f"Unsupported agent for eval: {case.agent}")
