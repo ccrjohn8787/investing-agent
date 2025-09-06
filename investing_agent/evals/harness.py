@@ -127,6 +127,16 @@ def run_consensus_case(case: EvalCase) -> EvalResult:
     except Exception as e:
         failures.append(f"exception during checks: {e}")
 
+    # Optional smoothing check: tail values trend to stable
+    if case.checks.get("tail_to_stable"):
+        try:
+            if abs(J.drivers.sales_growth[-1] - J.drivers.stable_growth) > tol:
+                failures.append("tail growth not close to stable")
+            if abs(J.drivers.oper_margin[-1] - J.drivers.stable_margin) > tol:
+                failures.append("tail margin not close to stable")
+        except Exception as e:
+            failures.append(f"exception during tail check: {e}")
+
     return EvalResult(name=case.name, passed=len(failures) == 0, failures=failures, details={})
 
 

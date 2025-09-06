@@ -78,11 +78,26 @@ def render_report(
 
     # Summary
     lines.append("## Summary")
-    lines.append(f"- Value per share: {V.value_per_share:,.2f}")
-    lines.append(f"- Equity value: {V.equity_value:,.0f}")
-    lines.append(f"- PV (explicit): {V.pv_explicit:,.0f}")
-    lines.append(f"- PV (terminal): {V.pv_terminal:,.0f}")
-    lines.append(f"- Shares out: {V.shares_out:,.0f}")
+    def _refs(*tokens: str) -> str:
+        toks = [t for t in tokens if t]
+        return f" [ref:{';'.join(toks)}]" if toks else ""
+
+    snap_ref = f"snap:{I.provenance.content_sha256}" if I.provenance and I.provenance.content_sha256 else None
+    lines.append(
+        f"- Value per share: {V.value_per_share:,.2f}" + _refs("computed:valuation.value_per_share")
+    )
+    lines.append(
+        f"- Equity value: {V.equity_value:,.0f}" + _refs("computed:valuation.equity_value")
+    )
+    lines.append(
+        f"- PV (explicit): {V.pv_explicit:,.0f}" + _refs("computed:valuation.pv_explicit", "table:Per-Year Detail")
+    )
+    lines.append(
+        f"- PV (terminal): {V.pv_terminal:,.0f}" + _refs("computed:valuation.pv_terminal", "section:Terminal Value")
+    )
+    lines.append(
+        f"- Shares out: {V.shares_out:,.0f}" + _refs("computed:valuation.shares_out", snap_ref)
+    )
     lines.append("")
 
     # Assumptions/Drivers
@@ -232,6 +247,12 @@ def render_report(
         lines.append("- No provenance provided (synthetic or local inputs)")
 
     # Citations to external snapshots
+    if citations is None and (pv.source_url or pv.content_sha256):
+        auto: List[str] = []
+        if pv.source_url or pv.vendor:
+            vs = pv.vendor or "vendor"
+            auto.append(f"Provenance: {vs}{f' — {pv.source_url}' if pv.source_url else ''}{f' (sha: {pv.content_sha256})' if pv.content_sha256 else ''}")
+        citations = auto if auto else None
     if citations:
         lines.append("")
         lines.append("## Citations")

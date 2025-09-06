@@ -40,6 +40,9 @@ class Snapshot:
     url: Optional[str] = None
     retrieved_at: Optional[str] = None
     content_sha256: Optional[str] = None
+    size: Optional[int] = None
+    content_type: Optional[str] = None
+    license: Optional[str] = None
 
 
 @dataclass
@@ -70,4 +73,3 @@ class Manifest:
             "artifacts": self.artifacts,
         }
         path.write_text(json.dumps(obj, indent=2))
-

@@ -23,7 +23,7 @@ def load_yaml_or_json(path: Path) -> Dict[str, Any]:
     return yaml.safe_load(text) or {}
 
 
-def build_cmd(job: Dict[str, Any]) -> List[str]:
+def build_cmd(job: Dict[str, Any], default_scenario: str | None = None) -> List[str]:
     cmd = ["python", "scripts/report.py"]
     ticker = job.get("ticker")
     if not ticker:
@@ -37,19 +37,23 @@ def build_cmd(job: Dict[str, Any]) -> List[str]:
         val = job.get(key)
         if val:
             cmd.extend([f"--{key}", str(val)])
+    scen = job.get("scenario") or default_scenario
+    if scen:
+        cmd.extend(["--scenario", str(scen)])
     return cmd
 
 
 def main():
     ap = argparse.ArgumentParser(description="Batch runner for reports")
-    ap.add_argument("plan", help="YAML/JSON file with jobs: [{ticker, fresh?, html?, growth?, margin?, s2c?, config?}]")
+    ap.add_argument("plan", help="YAML/JSON file with jobs and optional defaults")
     ap.add_argument("--run", action="store_true", help="Actually run commands (default: dry-run)")
     args = ap.parse_args()
     plan = load_yaml_or_json(Path(args.plan))
     jobs = plan.get("jobs", [])
+    default_scenario = plan.get("scenario")
     if not isinstance(jobs, list) or not jobs:
         raise SystemExit("plan missing jobs list")
-    cmds = [build_cmd(job) for job in jobs]
+    cmds = [build_cmd(job, default_scenario=default_scenario) for job in jobs]
     summary = {"count": len(cmds), "cmds": [" ".join(shlex.quote(c) for c in cmd) for cmd in cmds]}
     print(json.dumps(summary, indent=2))
     if args.run:
@@ -59,4 +63,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -57,5 +57,7 @@ def fetch_prices_with_meta(ticker: str, session: Optional[requests.Session] = No
         "url": url,
         "retrieved_at": datetime.utcnow().isoformat() + "Z",
         "content_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "size": len(text.encode("utf-8")),
+        "content_type": resp.headers.get("Content-Type", "text/csv"),
     }
     return ps, meta

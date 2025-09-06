@@ -77,3 +77,31 @@ def choose_next(I, v, context: Dict) -> Tuple[str, str | None]:
     last_route = context.get("last_route")
     nxt = _next_in_cycle(last_route, cycle)
     return nxt, None
+
+
+def simulate_routes(have_consensus: bool, have_comparables: bool, allow_news: bool, steps: int = 5) -> List[str]:
+    """Utility for tests: simulate next routes for a few steps given gating flags."""
+    routes: List[str] = []
+    ctx = {
+        "iter": 0,
+        "max_iters": steps,
+        "last_value": None,
+        "unchanged_steps": 0,
+        "ran_sensitivity_recent": True,  # avoid sensitivity by default
+        "have_consensus": have_consensus,
+        "have_comparables": have_comparables,
+        "allow_news": allow_news,
+        "last_route": None,
+    }
+    class _V:
+        value_per_share = 1.0
+    v = _V()
+    I = object()
+    for _ in range(steps):
+        r, _ = choose_next(I, v, ctx)
+        if r == "end":
+            break
+        routes.append(r)
+        ctx["last_route"] = r
+        ctx["iter"] += 1
+    return routes

@@ -55,5 +55,7 @@ def fetch_prices_v8_chart_with_meta(ticker: str, range_: str = "1y", interval: s
         "url": url,
         "retrieved_at": datetime.utcnow().isoformat() + "Z",
         "content_sha256": hashlib.sha256(resp.text.encode("utf-8")).hexdigest(),
+        "size": len(resp.text.encode("utf-8")),
+        "content_type": resp.headers.get("Content-Type", "application/json"),
     }
     return ps, meta

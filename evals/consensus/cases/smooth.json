@@ -1,0 +1,16 @@
+{
+  "name": "consensus_tail_smooths_to_stable",
+  "agent": "consensus",
+  "params": {
+    "company": "EvalCo",
+    "ticker": "EVAL",
+    "currency": "USD",
+    "revenue_t0": 1000.0,
+    "ebit_t0": 120.0,
+    "shares_out": 1000,
+    "tax_rate": 0.25,
+    "horizon": 8,
+    "consensus": { "growth": [0.12, 0.11], "margin": [0.18, 0.175] }
+  },
+  "checks": { "tol": 1e-6, "tail_to_stable": true }
+}

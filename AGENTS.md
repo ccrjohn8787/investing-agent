@@ -117,3 +117,47 @@ Use this template when creating or updating an agent.
 - Logging: `eventlog` entries `writer_md` / `writer_html` with byte counts and duration.
 - Tests: `tests/unit/test_builder_overrides_and_writer.py` (sections appear), `tests/unit/test_html_and_cli_parse.py` (HTML sections present).
 - Failure: If charts/fundamentals absent, degrade gracefully (omit sections) and annotate.
+- References: Summary bullets include inline tokens like `[ref:computed:valuation.value_per_share;table:Per-Year Detail;snap:<sha>]` to map claims to computed tables or snapshot IDs.
+
+### Critic
+- Name: Critic (`investing_agent/agents/critic.py::check_report`)
+- Purpose: Deterministic hygiene checks on reports; validates structure, numbers appear, citations, and now resolves inline reference tokens.
+- Reference resolution: Parses `[ref:...]` tokens and verifies:
+  - `table:`/`section:` refer to present sections (e.g., `## Per-Year Detail`).
+  - `snap:` hashes match known snapshot shas (from `InputsI.provenance.content_sha256`).
+  - `computed:` keys are recognized (valuation fields).
+
+### Market
+- Name: Market (`investing_agent/agents/market.py::apply`)
+- Purpose: Bounded multi‑driver least‑squares to reconcile intrinsic value with a target (e.g., last close) under scenario weights/bounds.
+- Input schema: `InputsI`; Parameters: `target_value_per_share` (or `context.target_price`), optional `weights`, `bounds`, `steps`.
+- Output schema: `InputsI` (nudged driver paths and stable values; terminal constraints respected).
+- Determinism: coarse grid search with fixed steps; idempotent given inputs and params.
+- Tests/Evals: `tests/unit/test_market_solver.py`, `evals/market/cases/`.
+
+### Comparables
+- Name: Comparables (`investing_agent/agents/comparables.py::apply`)
+- Purpose: Minimal peer policy — move stable margin toward peer median within a cap (bps), no LLM math.
+- Input schema: `InputsI`, `peers: list[dict]` with `stable_margin`, `policy.cap_bps`.
+- Output schema: `InputsI` (updated stable margin within bounds).
+- Tests/Evals: `tests/unit/test_consensus.py`, `evals/comparables/cases/`.
+
+### Consensus
+- Name: Consensus (`investing_agent/agents/consensus.py::apply`)
+- Purpose: Map near‑term consensus/guidance into `InputsI` while clamping long‑term drivers.
+- Input schema: `InputsI`, `consensus_data` dict supporting either:
+  - Arrays `revenue` and `ebit` (map to growth/margin per year), and/or
+  - Arrays `growth` and `margin` (directly override first N years)
+- Output schema: `InputsI` (updated paths; per‑element bounds enforced; optional smoothing to stable).
+- Provenance: Caller records consensus snapshot in manifest (`source=url/path`, `retrieved_at`, `content_sha256`).
+- Tests/Evals: `tests/unit/test_consensus.py`, `evals/consensus/cases/`.
+
+### Consensus
+- Name: Consensus (`investing_agent/agents/consensus.py::apply`)
+- Purpose: Map near-term consensus/guidance into `InputsI` while clamping long-term drivers.
+- Input schema: `InputsI`, `consensus_data` dict supporting either:
+  - Arrays `revenue` and `ebit` (map to growth/margin per year), and/or
+  - Arrays `growth` and `margin` (directly override first N years)
+- Output schema: `InputsI` (updated paths; per-element bounds enforced).
+- Provenance: Caller records consensus snapshot in manifest (`source=url/path`, `retrieved_at`, `content_sha256`).
+- Tests/Evals: `tests/unit/test_consensus.py`, `evals/consensus/cases/`.

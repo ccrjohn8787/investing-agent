@@ -1,0 +1,7 @@
+scenario: baseline
+jobs:
+  - ticker: META
+    html: true
+    # optional local consensus/peers
+    # consensus: out/META/consensus.json
+    # peers: out/META/peers.json

@@ -1,0 +1,27 @@
+id: cautious
+description: Cautious scenario with lower growth and margins, tighter bounds.
+
+horizon: 10
+discounting: midyear
+stable_growth: 0.025
+stable_margin: 0.10
+beta: 1.1
+macro:
+  erp: 0.055
+  country_risk: 0.005
+
+router:
+  enable_market: true
+  enable_consensus: true
+  enable_comparables: false
+  enable_news: true
+
+market_solver:
+  weights:
+    growth: 1.2
+    margin: 1.5
+    s2c: 0.5
+  bounds:
+    growth: [-0.06, 0.03]
+    margin: [-0.04, 0.02]
+    s2c: [-0.5, 0.4]

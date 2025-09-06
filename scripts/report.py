@@ -11,6 +11,7 @@ from investing_agent.agents.sensitivity import compute_sensitivity
 from investing_agent.agents.valuation import build_inputs_from_fundamentals
 from investing_agent.agents.writer import render_report
 from investing_agent.agents.html_writer import render_html_report
+from investing_agent.agents.market import apply as market_apply
 from investing_agent.connectors.edgar import (
     fetch_companyfacts,
     parse_companyfacts_to_fundamentals,
@@ -33,6 +34,8 @@ from investing_agent.orchestration.eventlog import EventLog
 from investing_agent.orchestration.manifest import Manifest, Snapshot
 import time as _time
 import hashlib as _hashlib
+from investing_agent.agents.consensus import apply as consensus_apply
+from investing_agent.agents.comparables import apply as comparables_apply
 
 
 def _parse_path_arg(s: str | None) -> list[float] | None:
@@ -158,7 +161,12 @@ def main():
     ap.add_argument("--growth", help="Comma-separated growth overrides (e.g., '8%,7%,6%' or '0.08,0.07')")
     ap.add_argument("--margin", help="Comma-separated margin overrides (e.g., '12%,13%' or '0.12,0.13')")
     ap.add_argument("--s2c", help="Comma-separated sales-to-capital overrides (e.g., '2.0,2.2,2.4')")
-    ap.add_argument("--config", help="JSON file with overrides and settings (growth, margin, s2c, stable_*, beta, discounting, horizon, macro)")
+    ap.add_argument("--config", help="JSON/YAML file with overrides and settings (growth, margin, s2c, stable_*, beta, discounting, horizon, macro)")
+    ap.add_argument("--scenario", help="Scenario name or path (loads configs/scenarios/<name>.yaml if name)")
+    ap.add_argument("--consensus", help="Path to consensus JSON (with revenue, ebit arrays)")
+    ap.add_argument("--peers", help="Path to peers JSON (list of dicts for comparables)")
+    ap.add_argument("--market-target", choices=["none", "last_close"], default="last_close")
+    ap.add_argument("--cap-bps", type=float, default=100.0, help="Comparables cap in bps if not set by scenario")
     ap.add_argument("--html", action="store_true", help="Also write HTML report next to Markdown")
     args = ap.parse_args()
     if not args.ticker:
@@ -166,10 +174,27 @@ def main():
 
     ticker = args.ticker.upper()
     run_id = _time.strftime("%Y%m%dT%H%M%SZ", _time.gmtime())
+    # Load scenario, then config file (config overrides scenario), then CLI overrides
+    cfg: dict = {}
+    # Scenario load
+    if args.scenario:
+        scen_arg = args.scenario
+        scen_path = Path(scen_arg)
+        if not scen_path.exists():
+            base = Path("configs/scenarios")
+            name = scen_arg if any(scen_arg.endswith(ext) for ext in (".yaml", ".yml")) else f"{scen_arg}.yaml"
+            scen_path = base / name
+        if scen_path.exists():
+            scen_cfg = _load_config(scen_path)
+            if isinstance(scen_cfg, dict):
+                cfg.update(scen_cfg)
+        else:
+            print(f"Warning: scenario not found: {scen_arg}")
     # Load config file if provided
-    cfg = {}
     if args.config:
-        cfg = _load_config(Path(args.config))
+        loaded = _load_config(Path(args.config))
+        if isinstance(loaded, dict):
+            cfg.update(loaded)
 
     # Optional overrides from CLI (take precedence over config)
     growth_path = _parse_path_arg(args.growth) or cfg.get("growth")
@@ -187,6 +212,12 @@ def main():
     local_inputs = out_dir / "inputs.json"
     eventlog = EventLog(out_dir / "run.jsonl")
     manifest = Manifest(run_id=run_id, ticker=ticker, asof=None)
+    # Record scenario content hash (if any)
+    if args.scenario:
+        try:
+            manifest.add_artifact("scenario", cfg)
+        except Exception:
+            pass
     if local_inputs.exists() and not args.fresh:
         I = InputsI.model_validate_json(local_inputs.read_text())
         if not I.macro.risk_free_curve:
@@ -238,16 +269,62 @@ def main():
         if not edgar_ua:
             print("Warning: EDGAR_UA not set; SEC requests may be blocked.")
 
-        # Fetch fundamentals
-        t0 = _time.time()
-        cf_json, meta = fetch_companyfacts(ticker, edgar_ua=edgar_ua)
-        eventlog.log(agent="fetch_fundamentals", params={"ticker": ticker}, outputs=meta, duration_ms=int((_time.time()-t0)*1000))
-        manifest.add_snapshot(Snapshot(source="edgar", url=meta.get("source_url"), retrieved_at=meta.get("retrieved_at"), content_sha256=meta.get("content_sha256")))
+        # Try local cached companyfacts first when not --fresh
+        local_cf = out_dir / "companyfacts.json"
+        cf_json = None
+        if local_cf.exists() and not args.fresh:
+            try:
+                text = local_cf.read_text()
+                cf_json = json.loads(text)
+                meta = {
+                    "source_url": str(local_cf),
+                    "retrieved_at": _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
+                    "content_sha256": _hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                }
+                manifest.add_snapshot(Snapshot(source="edgar", url=meta.get("source_url"), retrieved_at=meta.get("retrieved_at"), content_sha256=meta.get("content_sha256")))
+            except Exception:
+                cf_json = None
+        if cf_json is None:
+            # Fetch fundamentals
+            t0 = _time.time()
+            cf_json, meta = fetch_companyfacts(ticker, edgar_ua=edgar_ua)
+            eventlog.log(agent="fetch_fundamentals", params={"ticker": ticker}, outputs=meta, duration_ms=int((_time.time()-t0)*1000))
+            manifest.add_snapshot(Snapshot(source="edgar", url=meta.get("source_url"), retrieved_at=meta.get("retrieved_at"), content_sha256=meta.get("content_sha256"), size=meta.get("size"), content_type=meta.get("content_type"), license=meta.get("license")))
+            # Cache companyfacts
+            try:
+                out_dir.mkdir(parents=True, exist_ok=True)
+                (out_dir / "companyfacts.json").write_text(json.dumps(cf_json))
+            except Exception:
+                pass
         f = parse_companyfacts_to_fundamentals(cf_json, ticker=ticker)
 
         # Macro risk-free from UST latest 10Y with metadata
-        rows, ust_meta = fetch_treasury_yield_csv_with_meta()
-        manifest.add_snapshot(Snapshot(source="ust", url=ust_meta.get("url"), retrieved_at=ust_meta.get("retrieved_at"), content_sha256=ust_meta.get("content_sha256")))
+        # UST: try remote, else local cache out/<TICKER>/ust.csv
+        rows, ust_meta = ([], {})
+        try:
+            rows, ust_meta = fetch_treasury_yield_csv_with_meta()
+            manifest.add_snapshot(Snapshot(source="ust", url=ust_meta.get("url"), retrieved_at=ust_meta.get("retrieved_at"), content_sha256=ust_meta.get("content_sha256"), size=ust_meta.get("size"), content_type=ust_meta.get("content_type")))
+            # Cache CSV
+            try:
+                (out_dir / "ust.csv").write_text("\n".join([",".join(r.keys())] + [",".join(r.values()) for r in rows]) if rows else "")
+            except Exception:
+                pass
+        except Exception:
+            pass
+        if not rows:
+            # Try local cache
+            p = out_dir / "ust.csv"
+            if p.exists():
+                try:
+                    import csv
+                    from io import StringIO
+                    text = p.read_text()
+                    reader = csv.DictReader(StringIO(text))
+                    rows = [r for r in reader]
+                    ust_meta = {"url": str(p), "retrieved_at": _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()), "content_sha256": _hashlib.sha256(text.encode("utf-8")).hexdigest()}
+                    manifest.add_snapshot(Snapshot(source="ust", url=ust_meta.get("url"), retrieved_at=ust_meta.get("retrieved_at"), content_sha256=ust_meta.get("content_sha256")))
+                except Exception:
+                    rows = []
         rf_curve = build_risk_free_curve_from_ust(rows, horizon=10)
 
         # Build inputs with macro so WACC path reflects latest rf
@@ -284,25 +361,102 @@ def main():
         manifest.add_artifact("inputs", I.model_dump())
         f_for_report = f
         cf_for_report = cf_json
+        try:
+            out_dir.mkdir(parents=True, exist_ok=True)
+            (out_dir / "inputs.json").write_text(I.model_dump_json(indent=2))
+        except Exception:
+            pass
+
+    # Optional transforms from consensus/peers prior to initial valuation
+    if args.consensus:
+        p = Path(args.consensus)
+        try:
+            text = p.read_text()
+            data = json.loads(text)
+            I = consensus_apply(I, consensus_data=data)
+            manifest.add_snapshot(
+                Snapshot(
+                    source="consensus",
+                    url=str(p),
+                    retrieved_at=_time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
+                    content_sha256=_hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                )
+            )
+        except Exception as e:
+            print(f"Warning: failed to apply consensus from {p}: {e}")
+    if args.peers:
+        p = Path(args.peers)
+        try:
+            text = p.read_text()
+            peers = json.loads(text)
+            comp_cfg = cfg.get("comparables", {}) if isinstance(cfg.get("comparables"), dict) else {}
+            cap_bps = float(comp_cfg.get("cap_bps", float(args.cap_bps)))
+            I = comparables_apply(I, peers=peers, policy={"cap_bps": cap_bps})
+            manifest.add_snapshot(
+                Snapshot(
+                    source="peers",
+                    url=str(p),
+                    retrieved_at=_time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
+                    content_sha256=_hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                )
+            )
+        except Exception as e:
+            print(f"Warning: failed to apply peers from {p}: {e}")
 
     t0 = _time.time()
     V = kernel_value(I)
     eventlog.log(agent="valuation", inputs=I.model_dump(), outputs=V.model_dump(), duration_ms=int((_time.time()-t0)*1000))
     manifest.add_artifact("valuation", V.model_dump())
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "valuation.json").write_text(V.model_dump_json(indent=2))
+    except Exception:
+        pass
 
-    # Try prices via Stooq; fallback to Yahoo, with snapshot metadata
+    # Try prices via Stooq; fallback to Yahoo, and degrade gracefully offline
+    from investing_agent.schemas.prices import PriceSeries
     stooq_meta = None
     yahoo_meta = None
     try:
         t0 = _time.time()
         ps, stooq_meta = fetch_prices_stooq_with_meta(ticker)
         eventlog.log(agent="prices", params={"source": "stooq"}, outputs={"bars": len(ps.bars)}, duration_ms=int((_time.time()-t0)*1000))
-        manifest.add_snapshot(Snapshot(source="stooq", url=stooq_meta.get("url"), retrieved_at=stooq_meta.get("retrieved_at"), content_sha256=stooq_meta.get("content_sha256")))
+        manifest.add_snapshot(Snapshot(source="stooq", url=stooq_meta.get("url"), retrieved_at=stooq_meta.get("retrieved_at"), content_sha256=stooq_meta.get("content_sha256"), size=stooq_meta.get("size"), content_type=stooq_meta.get("content_type")))
     except Exception:
-        t0 = _time.time()
-        ps, yahoo_meta = fetch_prices_v8_chart_with_meta(ticker)
-        eventlog.log(agent="prices", params={"source": "yahoo"}, outputs={"bars": len(ps.bars)}, duration_ms=int((_time.time()-t0)*1000))
-        manifest.add_snapshot(Snapshot(source="yahoo", url=yahoo_meta.get("url"), retrieved_at=yahoo_meta.get("retrieved_at"), content_sha256=yahoo_meta.get("content_sha256")))
+        try:
+            t0 = _time.time()
+            ps, yahoo_meta = fetch_prices_v8_chart_with_meta(ticker)
+            eventlog.log(agent="prices", params={"source": "yahoo"}, outputs={"bars": len(ps.bars)}, duration_ms=int((_time.time()-t0)*1000))
+            manifest.add_snapshot(Snapshot(source="yahoo", url=yahoo_meta.get("url"), retrieved_at=yahoo_meta.get("retrieved_at"), content_sha256=yahoo_meta.get("content_sha256"), size=yahoo_meta.get("size"), content_type=yahoo_meta.get("content_type")))
+        except Exception:
+            ps = PriceSeries(ticker=ticker, bars=[])
+    # Local fallback: out/<TICKER>/prices.csv (Stooq format)
+    if not ps.bars:
+        try:
+            p = out_dir / "prices.csv"
+            if p.exists():
+                import csv
+                from datetime import datetime
+                rows = list(csv.DictReader(p.open()))
+                bars = []
+                from investing_agent.schemas.prices import PriceBar
+                for row in rows:
+                    try:
+                        d = datetime.fromisoformat(row["Date"]).date()
+                        o = float(row["Open"]) if row.get("Open") not in (None, "-") else None
+                        h = float(row["High"]) if row.get("High") not in (None, "-") else None
+                        l = float(row["Low"]) if row.get("Low") not in (None, "-") else None
+                        c = float(row["Close"]) if row.get("Close") not in (None, "-") else None
+                        v = float(row["Volume"]) if row.get("Volume") not in (None, "-") else None
+                        if None in (o, h, l, c):
+                            continue
+                        bars.append(PriceBar(date=d, open=o, high=h, low=l, close=c, volume=v))
+                    except Exception:
+                        continue
+                ps = PriceSeries(ticker=ticker, bars=bars)
+                manifest.add_snapshot(Snapshot(source="prices_csv", url=str(p), retrieved_at=_time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()), content_sha256=_hashlib.sha256(p.read_bytes()).hexdigest()))
+        except Exception:
+            pass
     last_close = ps.bars[-1].close if ps.bars else None
 
     t0 = _time.time()
@@ -344,9 +498,63 @@ def main():
             citations.append(f"Yahoo prices: {yahoo_meta.get('url')} (sha: {yahoo_meta.get('content_sha256')})")
     except Exception:
         pass
+    try:
+        if args.consensus:
+            citations.append(f"Consensus: {args.consensus}")
+    except Exception:
+        pass
+    try:
+        if args.peers:
+            citations.append(f"Peers: {args.peers}")
+    except Exception:
+        pass
+
+    # Optional: market solver (scenario-gated) to reconcile intrinsic value with market cap
+    try:
+        enable_market = bool(cfg.get("router", {}).get("enable_market", False))
+        if args.market_target == "last_close" and enable_market and last_close is not None and last_close > 0 and I.shares_out > 0:
+            ms_cfg = cfg.get("market_solver", {}) if isinstance(cfg.get("market_solver"), dict) else {}
+            steps_cfg = ms_cfg.get("steps") or (5, 5, 5)
+            I2 = market_apply(
+                I,
+                target_value_per_share=float(last_close),
+                weights=ms_cfg.get("weights"),
+                bounds=ms_cfg.get("bounds"),
+                steps=tuple(steps_cfg) if isinstance(steps_cfg, (list, tuple)) else (5, 5, 5),
+            )
+            if I2 != I:
+                I = I2
+                t1 = _time.time()
+                V = kernel_value(I)
+                eventlog.log(agent="market_solve", params={"target_vps": last_close}, inputs=cfg.get("market_solver"), outputs={"value_per_share": V.value_per_share}, duration_ms=int((_time.time()-t1)*1000))
+                manifest.add_artifact("post_market_inputs", I.model_dump())
+                manifest.add_artifact("post_market_valuation", V.model_dump())
+                # Recompute sensitivity on adjusted inputs
+                sens = compute_sensitivity(I, growth_delta=0.02, margin_delta=0.01, steps=(5, 5))
+                heat_png = plot_sensitivity_heatmap(sens, title=f"Sensitivity — {ticker}")
+                g = np.array(I.drivers.sales_growth)
+                m = np.array(I.drivers.oper_margin)
+                w = np.array(I.wacc)
+                drv_png = plot_driver_paths(len(g), g, m, w)
+                bridge_png = plot_pv_bridge(V)
+                try:
+                    if ps and ps.bars:
+                        price_png = plot_price_vs_value(ps, V.value_per_share, title=f"Price vs Value — {ticker}")
+                except Exception:
+                    price_png = None
+    except Exception:
+        pass
 
     t0 = _time.time()
     md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, citations=citations, fundamentals=(f_for_report if 'f_for_report' in locals() else None), pv_bridge_png=bridge_png, price_vs_value_png=price_png)
+    # Scenario section (if provided)
+    if args.scenario:
+        md += "\n\n## Scenario\n"
+        md += f"- Scenario: {args.scenario}\n"
+        # surface key builder-related items if present
+        for k in ["horizon", "discounting", "stable_growth", "stable_margin", "beta"]:
+            if k in cfg:
+                md += f"- {k}: {cfg[k]}\n"
     eventlog.log(agent="writer_md", outputs={"bytes": len(md.encode('utf-8'))}, duration_ms=int((_time.time()-t0)*1000))
     if last_close is not None:
         md += f"\n\n## Market\n- Last close: {last_close:,.2f}\n- Discount/Premium vs value: {(V.value_per_share/last_close - 1.0):.2%}\n"
@@ -376,6 +584,8 @@ def main():
             driver_paths_png=drv_png,
             fundamentals=(f_for_report if 'f_for_report' in locals() else None),
             companyfacts_json=(cf_for_report if 'cf_for_report' in locals() else None),
+            pv_bridge_png=bridge_png,
+            price_vs_value_png=price_png,
         )
         (out_dir / "report.html").write_text(html_text)
         manifest.add_artifact("report.html", html_text)

@@ -1,0 +1,27 @@
+id: aggressive
+description: Aggressive scenario with higher growth and margin targets; wider bounds.
+
+horizon: 12
+discounting: midyear
+stable_growth: 0.035
+stable_margin: 0.14
+beta: 0.9
+macro:
+  erp: 0.045
+  country_risk: 0.000
+
+router:
+  enable_market: true
+  enable_consensus: true
+  enable_comparables: true
+  enable_news: true
+
+market_solver:
+  weights:
+    growth: 0.9
+    margin: 1.0
+    s2c: 0.8
+  bounds:
+    growth: [-0.04, 0.06]
+    margin: [-0.02, 0.04]
+    s2c: [-0.6, 0.6]

@@ -1,0 +1,22 @@
+{
+  "name": "comparables_moves_stable_margin_toward_median_with_cap",
+  "agent": "comparables",
+  "params": {
+    "company": "EvalCo",
+    "ticker": "EVAL",
+    "currency": "USD",
+    "revenue_t0": 1000.0,
+    "ebit_t0": 120.0,
+    "shares_out": 1000,
+    "tax_rate": 0.25,
+    "horizon": 6,
+    "stable_margin": 0.15,
+    "peers": [
+      {"ticker": "PEER1", "stable_margin": 0.18},
+      {"ticker": "PEER2", "stable_margin": 0.20},
+      {"ticker": "PEER3", "stable_margin": 0.14}
+    ],
+    "policy": {"cap_bps": 100}
+  },
+  "checks": { "tol": 1e-6 }
+}

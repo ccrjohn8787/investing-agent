@@ -1,0 +1,19 @@
+{
+  "name": "market_margin_cap_target",
+  "agent": "market",
+  "params": {
+    "company": "EvalCo",
+    "ticker": "EVAL",
+    "currency": "USD",
+    "revenue_t0": 1000.0,
+    "ebit_t0": 120.0,
+    "shares_out": 1000,
+    "tax_rate": 0.25,
+    "horizon": 6,
+    "stable_margin": 0.15,
+    "cap_bps": 100,
+    "target_mode": "sm_cap",
+    "direction": "up"
+  },
+  "checks": { "tol": 0.05 }
+}

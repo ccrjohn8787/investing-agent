@@ -89,6 +89,8 @@ def fetch_companyfacts(cik_or_ticker: str, edgar_ua: Optional[str] = None, sessi
         "retrieved_at": datetime.utcnow().isoformat() + "Z",
         "content_sha256": _hash_bytes(b),
         "license": "SEC public data",
+        "size": len(b),
+        "content_type": resp.headers.get("Content-Type", "application/json"),
     }
     return resp.json(), meta
 

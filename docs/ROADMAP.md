@@ -26,25 +26,25 @@ This roadmap captures the end goal, success criteria, milestones, and current st
 - M2 Audit & provenance: `run.jsonl` event log + `manifest.json` with EDGAR snapshot — DONE
 - M3 Algorithm plan + agent rules: `docs/ALGORITHM.md`, `AGENTS.md` — DONE
 - M4 Deterministic router (rule‑based) returning next step + guards — DONE
-- M5 Agents v1 (code‑only): market/consensus/comparables bounded transforms — PENDING
+- M5 Agents v1 (code‑only): market/consensus/comparables bounded transforms — PARTIAL (market/comparables, consensus smoothing)
 - M6 News v1: deterministic retrieval; bounded ingest; optional deterministic summary — PENDING
-- M7 Manifest snapshots extended: add UST and prices (URL + meta; hash when available) — PARTIAL (URL recorded)
-- M8 Citations enforcement: report maps claims to snapshot IDs or computed tables — PENDING
+- M7 Manifest snapshots extended: add UST and prices (URL + meta; hash when available) — DONE (size/content_type added)
+- M8 Citations enforcement: report maps claims to snapshot IDs or computed tables — DONE
 - M9 Golden fixtures & CI gates: canary tickers, acceptance checks, artifact hash pinning — PENDING
-- M10 CLI polish: scenario YAML, multi‑ticker batch, richer flags; CSV/JSON exports — PENDING
+- M10 CLI polish: scenario YAML, multi‑ticker batch, richer flags; CSV/JSON exports — DONE (scenario + batch + flags)
 - M11 Caching & performance: local caches with revalidation; parallel fetch where safe — PENDING
 - M12 Writer/Critic (LLM) gating: deterministic prompts; critic blocks unsafe changes — PENDING
 - M13 Orchestrator FSM: structured flow with router loop + stop conditions — PENDING
 - M14 Web UI (optional): single‑file HTML viewer + lightweight UI — OPTIONAL
 
 ### Current Status (2025‑Q3)
-- Kernel, reports, audit trail, and algorithm spec are in place. Agent stubs exist for router/market/consensus/comparables/news. Manifest snapshots now include EDGAR (with hash) and URLs for UST/prices. CI runs ruff/mypy/pytest on 3.11/3.12. All tests passing.
+- Kernel, reports, audit trail, and algorithm spec are in place. Router heuristics have unit coverage. Market solver and comparables are implemented with bounds; consensus maps near‑term and trends the tail back to stable. Manifest snapshots include EDGAR/UST/prices with size/content_type. CI runs ruff/mypy/pytest on 3.11/3.12.
 
 ### Next Actions (near‑term)
-1) Implement a deterministic router heuristic (M4) and add unit tests.
-2) Implement minimal market/consensus/comparables transforms (M5) + tests and docstrings outlining bounds.
-3) Wire citations in the report to manifest snapshot IDs (M8) and add tests asserting presence.
-4) Extend UST/prices connectors to expose retrieval meta (timestamp + raw content when feasible) to include hashes in snapshots (finish M7).
+1) Consensus (M5 finalize): add optional smoothing parameters (scenario‑driven slope/half‑life), evals for bounds and tail behavior.
+2) Router (M4 polish): add supervisor loop integration test and convergence thresholds as config; ensure sensitivity run occurs once near convergence.
+3) Golden canaries (M9): add 2–3 ticker fixtures with goldens; wire gating in CI; record manifest deltas and critic pass.
+4) Caching & perf (M11): generalize caches outside `out/<TICKER>/` with revalidation and TTL; add controlled parallel fetch for EDGAR/UST/prices where safe.
 
 ### Risks & Mitigations
 - Upstream instability (SEC/UST/price endpoints): cache artifacts with hashes; degrade gracefully; annotate report.

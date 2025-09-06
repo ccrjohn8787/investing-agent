@@ -1,0 +1,16 @@
+{
+  "name": "consensus_maps_first_two_years",
+  "agent": "consensus",
+  "params": {
+    "company": "EvalCo",
+    "ticker": "EVAL",
+    "currency": "USD",
+    "revenue_t0": 1000.0,
+    "ebit_t0": 120.0,
+    "shares_out": 1000,
+    "tax_rate": 0.25,
+    "horizon": 6,
+    "consensus": { "revenue_y1": 1100.0, "revenue_y2": 1210.0, "ebit_y1": 170.0, "ebit_y2": 181.5 }
+  },
+  "checks": { "tol": 1e-6 }
+}

@@ -60,6 +60,7 @@ def main():
     ap.add_argument("--cap-bps", type=float, default=100.0, help="Cap for market and comparables (bps)")
     ap.add_argument("--max-iters", type=int, default=8)
     ap.add_argument("--html", action="store_true", help="Also write HTML report")
+    ap.add_argument("--scenario", help="Scenario name or path (loads configs/scenarios/<name>.yaml if name)")
     ap.add_argument("--offline", action="store_true", help="Offline mode: use cached/local files; no network")
     ap.add_argument("--inputs-json", help="Path to cached inputs.json to use directly (skips EDGAR/UST)")
     ap.add_argument("--companyfacts-json", help="Path to local EDGAR companyfacts JSON (default: out/<TICKER>/companyfacts.json)")
@@ -74,6 +75,33 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     eventlog = EventLog(out_dir / "run.jsonl")
     manifest = Manifest(run_id=os.environ.get("RUN_ID", "supervisor"), ticker=ticker)
+
+    # Scenario config
+    def _load_config(path: Path) -> dict:
+        try:
+            text = path.read_text()
+        except Exception:
+            return {}
+        try:
+            import yaml  # type: ignore
+
+            return yaml.safe_load(text) or {}
+        except Exception:
+            try:
+                return json.loads(text)
+            except Exception:
+                return {}
+
+    cfg: dict = {}
+    if args.scenario:
+        scen = args.scenario
+        p = Path(scen)
+        if not p.exists():
+            base = Path("configs/scenarios")
+            name = scen if any(scen.endswith(ext) for ext in (".yaml", ".yml")) else f"{scen}.yaml"
+            p = base / name
+        if p.exists():
+            cfg.update(_load_config(p))
 
     # Fetch or load fundamentals
     if args.inputs_json:
@@ -188,17 +216,35 @@ def main():
     # Optional data inputs
     consensus_data = _load_json(args.consensus)
     peers = _load_json(args.peers)
+    # Record snapshots for local consensus/peers if provided
+    if args.consensus:
+        p = Path(args.consensus)
+        if p.exists():
+            try:
+                text = p.read_text()
+                manifest.add_snapshot(Snapshot(source="consensus", url=str(p), retrieved_at=datetime.utcnow().isoformat() + "Z", content_sha256=hashlib.sha256(text.encode("utf-8")).hexdigest()))
+            except Exception:
+                pass
+    if args.peers:
+        p = Path(args.peers)
+        if p.exists():
+            try:
+                text = p.read_text()
+                manifest.add_snapshot(Snapshot(source="peers", url=str(p), retrieved_at=datetime.utcnow().isoformat() + "Z", content_sha256=hashlib.sha256(text.encode("utf-8")).hexdigest()))
+            except Exception:
+                pass
 
     # Router context
+    router_cfg = cfg.get("router", {}) if isinstance(cfg.get("router"), dict) else {}
     ctx = {
         "iter": 0,
         "max_iters": int(args.max_iters),
         "last_value": None,
         "unchanged_steps": 0,
         "ran_sensitivity_recent": False,
-        "have_consensus": bool(consensus_data),
-        "have_comparables": bool(peers),
-        "allow_news": False,
+        "have_consensus": bool(consensus_data) and bool(router_cfg.get("enable_consensus", False)),
+        "have_comparables": bool(peers) and bool(router_cfg.get("enable_comparables", False)),
+        "allow_news": bool(router_cfg.get("enable_news", False)),
         "last_route": None,
     }
 
@@ -211,14 +257,24 @@ def main():
             break
         prev_v = V.value_per_share
         if route == "market":
-            if args.market_target == "last_close" and last_close:
-                I = market_apply(I, context={"target_price": float(last_close), "cap_bps": float(args.cap_bps)})
+            if args.market_target == "last_close" and last_close and bool(router_cfg.get("enable_market", True)):
+                ms_cfg = cfg.get("market_solver", {}) if isinstance(cfg.get("market_solver"), dict) else {}
+                steps_cfg = ms_cfg.get("steps") or (5, 5, 5)
+                I = market_apply(
+                    I,
+                    target_value_per_share=float(last_close),
+                    weights=ms_cfg.get("weights"),
+                    bounds=ms_cfg.get("bounds"),
+                    steps=tuple(steps_cfg) if isinstance(steps_cfg, (list, tuple)) else (5, 5, 5),
+                )
                 V = kernel_value(I)
         elif route == "consensus" and consensus_data:
             I = consensus_apply(I, consensus_data=consensus_data)
             V = kernel_value(I)
         elif route == "comparables" and isinstance(peers, list):
-            I = comparables_apply(I, peers=peers, policy={"cap_bps": float(args.cap_bps)})
+            comp_cfg = cfg.get("comparables", {}) if isinstance(cfg.get("comparables"), dict) else {}
+            cap_bps = float(comp_cfg.get("cap_bps", float(args.cap_bps)))
+            I = comparables_apply(I, peers=peers, policy={"cap_bps": cap_bps})
             V = kernel_value(I)
         elif route == "sensitivity":
             sens = compute_sensitivity(I)
@@ -252,6 +308,10 @@ def main():
         citations.append(f"Stooq prices: {stooq_meta.get('url')} (sha: {stooq_meta.get('content_sha256')})")
     elif yahoo_meta:
         citations.append(f"Yahoo prices: {yahoo_meta.get('url')} (sha: {yahoo_meta.get('content_sha256')})")
+    if args.consensus:
+        citations.append(f"Consensus: {args.consensus}")
+    if args.peers:
+        citations.append(f"Peers: {args.peers}")
 
     # Render report
     md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, citations=citations, fundamentals=f, pv_bridge_png=bridge_png, price_vs_value_png=price_png)
@@ -259,7 +319,7 @@ def main():
     if args.html:
         from investing_agent.agents.html_writer import render_html_report
 
-        html = render_html_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, fundamentals=f, companyfacts_json=cf_json)
+        html = render_html_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, fundamentals=f, companyfacts_json=cf_json, pv_bridge_png=bridge_png, price_vs_value_png=price_png)
         (out_dir / "report.html").write_text(html)
 
     # Save plots
@@ -271,6 +331,12 @@ def main():
     if price_png:
         (out_dir / "price_vs_value.png").write_bytes(price_png)
 
+    # Record scenario in manifest if provided
+    if args.scenario:
+        try:
+            manifest.add_artifact("scenario", cfg)
+        except Exception:
+            pass
     manifest.add_artifact("report.md", md)
     manifest.write(out_dir / "manifest.json")
     print(f"Supervisor wrote report to {out_dir.resolve()}")

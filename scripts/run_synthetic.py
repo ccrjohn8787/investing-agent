@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from investing_agent.agents.plotting import plot_driver_paths, plot_sensitivity_heatmap
+from investing_agent.agents.plotting import plot_driver_paths, plot_sensitivity_heatmap, plot_pv_bridge
 from investing_agent.agents.sensitivity import compute_sensitivity
 from investing_agent.agents.valuation import build_inputs_from_fundamentals
 from investing_agent.agents.writer import render_report
@@ -40,13 +40,15 @@ def main():
     w = np.array(I.wacc)
     drv_png = plot_driver_paths(len(g), g, m, w)
 
-    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, fundamentals=f)
+    bridge_png = plot_pv_bridge(V)
+    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, fundamentals=f, pv_bridge_png=bridge_png)
 
     out = Path("out")
     out.mkdir(exist_ok=True)
     (out / f"{I.ticker}_report.md").write_text(md)
     (out / f"{I.ticker}_sensitivity.png").write_bytes(heat_png)
     (out / f"{I.ticker}_drivers.png").write_bytes(drv_png)
+    (out / f"{I.ticker}_pv_bridge.png").write_bytes(bridge_png)
     print(f"Wrote report and plots to {out.resolve()}")
 
 

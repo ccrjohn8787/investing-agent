@@ -61,11 +61,13 @@ def fetch_treasury_yield_csv_with_meta(url: str = TREASURY_YIELD_CSV, session: O
                 "url": u,
                 "retrieved_at": datetime.utcnow().isoformat() + "Z",
                 "content_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                "size": len(text.encode("utf-8")),
+                "content_type": resp.headers.get("Content-Type", "text/csv"),
             }
             return rows, meta
         except Exception:
             continue
-    return [], {"url": url, "retrieved_at": datetime.utcnow().isoformat() + "Z", "content_sha256": None}
+    return [], {"url": url, "retrieved_at": datetime.utcnow().isoformat() + "Z", "content_sha256": None, "size": None, "content_type": None}
 
 
 def latest_yield_curve(rows: List[dict]) -> Dict[str, float]:

@@ -1,0 +1,30 @@
+id: baseline
+description: Default baseline scenario for valuation runs.
+
+# Builder defaults (override-able by CLI/config)
+horizon: 10
+discounting: midyear
+stable_growth: 0.03
+stable_margin: 0.12
+beta: 1.0
+macro:
+  erp: 0.05
+  country_risk: 0.00
+
+# Router gating (future use)
+router:
+  enable_market: true
+  enable_consensus: false
+  enable_comparables: false
+  enable_news: false
+
+# Market solver settings (future use)
+market_solver:
+  weights:
+    growth: 1.0
+    margin: 1.0
+    s2c: 0.5
+  bounds:
+    growth: [-0.05, 0.05]
+    margin: [-0.03, 0.03]
+    s2c: [-0.5, 0.5]

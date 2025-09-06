@@ -1,74 +1,155 @@
 from __future__ import annotations
 
 """
-Market agent (planned)
+Market solver: bounded multi-driver least-squares to reconcile intrinsic value with market.
 
-Applies bounded, schema-checked transforms to InputsI to reconcile structural
-assumptions (e.g., WACC path, beta) with market context. No direct LLM math.
+Adjusts three driver families by a uniform delta across the path:
+- sales_growth: add delta_g to each year and stable_growth
+- oper_margin: add delta_m to each year and stable_margin
+- sales_to_capital: add delta_s to each year
+
+Objective: minimize (vps(I') - target_vps)^2 + λ_g*delta_g^2 + λ_m*delta_m^2 + λ_s*delta_s^2.
+Bounds on deltas are per scenario config.
 """
 
-from investing_agent.schemas.inputs import InputsI
+from dataclasses import dataclass
+from typing import Dict, Iterable, Tuple, Optional
+
+import numpy as np
+
 from investing_agent.kernels.ginzu import value as kernel_value
+from investing_agent.schemas.inputs import Drivers, InputsI
 
 
-def apply(I: InputsI, context: dict | None = None) -> InputsI:
+@dataclass
+class SolverBounds:
+    growth: Tuple[float, float] = (-0.05, 0.05)
+    margin: Tuple[float, float] = (-0.03, 0.03)
+    s2c: Tuple[float, float] = (-0.5, 0.5)
+
+
+@dataclass
+class SolverWeights:
+    growth: float = 1.0
+    margin: float = 1.0
+    s2c: float = 0.5
+
+
+def _clip_array(a: Iterable[float], lo: float, hi: float) -> np.ndarray:
+    x = np.array(list(a), dtype=float)
+    return np.clip(x, lo, hi)
+
+
+def _apply_deltas(I: InputsI, dg: float, dm: float, ds: float) -> InputsI:
+    T = I.horizon()
+    g = np.array(I.drivers.sales_growth, dtype=float)
+    m = np.array(I.drivers.oper_margin, dtype=float)
+    s = np.array(I.sales_to_capital, dtype=float)
+
+    # Apply uniform deltas and clamp to reasonable ranges
+    g2 = _clip_array(g + dg, lo=-0.50, hi=0.50)
+    m2 = _clip_array(m + dm, lo=0.00, hi=0.60)
+    s2 = _clip_array(s + ds, lo=0.10, hi=10.00)
+
+    # Stable values follow the same shift (clamped)
+    sg2 = float(np.clip(I.drivers.stable_growth + dg, -0.05, 0.05))
+    sm2 = float(np.clip(I.drivers.stable_margin + dm, 0.00, 0.60))
+
+    # Build updated InputsI
+    drv = Drivers(
+        sales_growth=[float(x) for x in g2.tolist()],
+        oper_margin=[float(x) for x in m2.tolist()],
+        stable_growth=sg2,
+        stable_margin=sm2,
+    )
+    I2 = I.model_copy(update={
+        "drivers": drv,
+        "sales_to_capital": [float(x) for x in s2.tolist()],
+    })
+    # Ensure terminal growth constraint: g_inf < r_inf - 50bps; if violated, back off sg2
+    r_inf = float(I2.wacc[-1]) if I2.wacc else 0.06
+    max_sg = r_inf - 0.006
+    if I2.drivers.stable_growth >= max_sg:
+        I2 = I2.model_copy(update={
+            "drivers": I2.drivers.model_copy(update={"stable_growth": float(max(-0.05, max_sg))})
+        })
+    return I2
+
+
+def apply(
+    I: InputsI,
+    *,
+    target_value_per_share: Optional[float] = None,
+    weights: Dict[str, float] | SolverWeights | None = None,
+    bounds: Dict[str, Tuple[float, float]] | SolverBounds | None = None,
+    steps: Tuple[int, int, int] = (5, 5, 5),
+    context: Optional[Dict] = None,
+) -> InputsI:
+    """Return a new InputsI adjusted to better match target value per share.
+
+    Deterministic coarse grid search over bounded deltas with quadratic regularization.
     """
-    Market reconciliation agent (contract stub — eval-first).
+    # Allow eval harness context override (target_price, cap_bps)
+    if context:
+        tp = context.get("target_price")
+        if tp is not None:
+            target_value_per_share = float(tp)
+        # If cap_bps is provided, prefer margin-only adjustments within ±cap
+        cap_bps = context.get("cap_bps")
+        if cap_bps is not None:
+            cap = float(cap_bps) / 10000.0
+            bounds = {"growth": (0.0, 0.0), "margin": (-cap, cap), "s2c": (0.0, 0.0)}
 
-    Purpose (per paper):
-    - When asked to reconcile intrinsic value to market price, find the smallest
-      bounded changes to the value drivers that match the observed market price,
-      with a transparent rationale and provenance.
-
-    Contract (target state):
-    - Inputs: `InputsI`, optional `context` with
-      {"target_price", "weights", "bounds", "penalties"}.
-    - Output: new `InputsI` with proposed deltas; numeric changes derive from a
-      code solver (least-squares with bounds), never from an LLM.
-    - Determinism: fully deterministic given inputs and bounds.
-    - Provenance: record rationale and constraints in event log; cite snapshots.
-
-    Solver (current minimal implementation):
-    - Adjust only the stable margin toward the target price using bounded bisection
-      within ±cap_bps (default 100 bps), clamped to [5%, 35%].
-    - If no target provided, return no-op copy.
-    """
-    J = I.model_copy(deep=True)
-    if not context or "target_price" not in context:
-        return J
-    target = float(context.get("target_price"))
-    cap_bps = float(context.get("cap_bps", 100.0))
-    cap = cap_bps / 10000.0
-    sm0 = float(J.drivers.stable_margin)
-    lo = max(0.05, sm0 - cap)
-    hi = min(0.35, sm0 + cap)
-
-    def vps(sm: float) -> float:
-        K = J.model_copy(deep=True)
-        K.drivers.stable_margin = float(sm)
-        return kernel_value(K).value_per_share
-
-    vl = vps(lo)
-    vh = vps(hi)
-    # If target outside bracket, choose closest bound
-    if target <= min(vl, vh) or target >= max(vl, vh):
-        chosen = lo if abs(vl - target) <= abs(vh - target) else hi
-        J.drivers.stable_margin = chosen
-        return J
-
-    # Ensure monotonic direction for bisection: if vl > vh, swap and track
-    a, fa = lo, vl
-    b, fb = hi, vh
-    if fa > fb:
-        a, b = b, a
-        fa, fb = fb, fa
-    # Now fa <= fb; target between fa and fb
-    for _ in range(20):
-        m = 0.5 * (a + b)
-        fm = vps(m)
-        if fm < target:
-            a, fa = m, fm
+    w = weights if isinstance(weights, SolverWeights) else None
+    if w is None:
+        if isinstance(weights, dict):
+            w = SolverWeights(
+                growth=float(weights.get("growth", 1.0)),
+                margin=float(weights.get("margin", 1.0)),
+                s2c=float(weights.get("s2c", 0.5)),
+            )
         else:
-            b, fb = m, fm
-    J.drivers.stable_margin = 0.5 * (a + b)
-    return J
+            w = SolverWeights()
+
+    b = bounds if isinstance(bounds, SolverBounds) else None
+    if b is None:
+        if isinstance(bounds, dict):
+            b = SolverBounds(
+                growth=tuple(bounds.get("growth", (-0.05, 0.05))),
+                margin=tuple(bounds.get("margin", (-0.03, 0.03))),
+                s2c=tuple(bounds.get("s2c", (-0.5, 0.5))),
+            )
+        else:
+            b = SolverBounds()
+
+    # Build axes
+    sg = np.linspace(b.growth[0], b.growth[1], max(2, int(steps[0])))
+    sm = np.linspace(b.margin[0], b.margin[1], max(2, int(steps[1])))
+    ss = np.linspace(b.s2c[0], b.s2c[1], max(2, int(steps[2])))
+
+    base_vps = kernel_value(I).value_per_share
+    if target_value_per_share is None:
+        # Nothing to do if no target
+        return I
+    target = float(target_value_per_share)
+    best_cost = float("inf")
+    best_tuple = (0.0, 0.0, 0.0)
+
+    for dg in sg:
+        for dm in sm:
+            for ds in ss:
+                I2 = _apply_deltas(I, float(dg), float(dm), float(ds))
+                vps2 = kernel_value(I2).value_per_share
+                err = vps2 - target
+                # Quadratic regularization toward smaller deltas
+                cost = err * err + (w.growth * dg * dg) + (w.margin * dm * dm) + (w.s2c * ds * ds)
+                if cost < best_cost:
+                    best_cost = cost
+                    best_tuple = (float(dg), float(dm), float(ds))
+
+    dg, dm, ds = best_tuple
+    # If best_tuple is zeros and base already close, return base to avoid noise
+    if dg == 0.0 and dm == 0.0 and ds == 0.0:
+        return I
+
+    return _apply_deltas(I, dg, dm, ds)

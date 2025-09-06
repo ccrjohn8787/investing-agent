@@ -27,6 +27,8 @@ def render_html_report(
     driver_paths_png: Optional[bytes] = None,
     fundamentals: Optional[Fundamentals] = None,
     companyfacts_json: Optional[dict] = None,
+    pv_bridge_png: Optional[bytes] = None,
+    price_vs_value_png: Optional[bytes] = None,
 ) -> str:
     """Single-file HTML report with tables and embedded images."""
     S = K.series(I)
@@ -59,6 +61,8 @@ def render_html_report(
 
     sens_src = _b64_img(sensitivity_png)
     drv_src = _b64_img(driver_paths_png)
+    bridge_src = _b64_img(pv_bridge_png)
+    price_src = _b64_img(price_vs_value_png)
 
     cf_pretty = ""
     if companyfacts_json is not None:
@@ -203,6 +207,7 @@ def render_html_report(
     <div class="card"><div class="label">PV (terminal)</div><div class="value">{V.pv_terminal:,.0f}</div></div>
     <div class="card"><div class="label">Shares out</div><div class="value">{V.shares_out:,.0f}</div></div>
   </div>
+  <p class="meta">Refs: [ref:computed:valuation.value_per_share] [ref:computed:valuation.equity_value] [ref:computed:valuation.pv_explicit;table:Per-Year Detail] [ref:computed:valuation.pv_terminal;section:Terminal Value]{f" [ref:snap:{html.escape(I.provenance.content_sha256)}]" if I.provenance and I.provenance.content_sha256 else ""}</p>
 
   <section>
     <h2>Drivers & Assumptions</h2>
@@ -241,6 +246,8 @@ def render_html_report(
   <section class="charts grid">
     {f'<div><h2>Sensitivity</h2><img alt="Sensitivity Heatmap" src="{sens_src}" /></div>' if sens_src else ''}
     {f'<div><h2>Driver Paths</h2><img alt="Driver Paths" src="{drv_src}" /></div>' if drv_src else ''}
+    {f'<div><h2>PV Bridge</h2><img alt="PV Bridge" src="{bridge_src}" /></div>' if bridge_src else ''}
+    {f'<div><h2>Price vs Value</h2><img alt="Price vs Value" src="{price_src}" /></div>' if price_src else ''}
   </section>
 
   {fundamentals_table}

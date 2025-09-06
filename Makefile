@@ -26,5 +26,8 @@ build_i:
 report:
 	CT=$(CT) python scripts/report.py
 
+supervisor:
+	CT=$(CT) python scripts/supervisor.py --html
+
 router_demo:
 	python scripts/router_demo.py

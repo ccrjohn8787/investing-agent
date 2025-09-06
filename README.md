@@ -18,6 +18,7 @@ Algorithm
 
 Roadmap
 - See `docs/ROADMAP.md` for milestones, success criteria, and current status.
+  - Current: M10 (scenarios/CLI) DONE, M8 (citations/refs) DONE, M7 (snapshot meta) DONE, M5 (market/comps + consensus polish) PARTIAL.
 
 Structure
 - `investing_agent/schemas`: Typed objects for inputs, outputs, and fundamentals.
@@ -56,6 +57,10 @@ Reports
   - `python scripts/report.py <TICKER> --config path/to/config.yaml` (YAML) or `.json`
   - CLI flags take precedence over config values.
 - Export HTML (single‑file) alongside Markdown: add `--html`.
+- Scenario presets: `--scenario baseline|cautious|aggressive` (loads from `configs/scenarios/`).
+- Apply consensus (near-term revenue/EBIT): `--consensus path/to/consensus.json`.
+- Apply comparables (peer list): `--peers path/to/peers.json` (cap via scenario `comparables.cap_bps` or `--cap-bps`).
+- Market solver target: `--market-target last_close|none` when scenario enables market.
 
 Artifacts
 - Markdown: `out/<TICKER>/report.md`
@@ -70,13 +75,33 @@ Report Contents
 - Per‑year detail: revenue, growth, margin, sales‑to‑capital, ROIC, reinvestment, FCFF, WACC, discount factor, PV(FCFF).
 - Terminal value: FCFF(T+1), r−g, TV@T, DF@T, PV(TV).
 - Fundamentals (parsed): annual revenue/EBIT table, TTM revenue/EBIT, shares, tax, D&A, capex, lease assets/liabilities, working capital.
-- HTML only: embedded charts (sensitivity, drivers) and collapsible raw companyfacts JSON (for transparency).
+- HTML only: embedded charts (sensitivity, drivers, PV bridge, price vs value) and collapsible raw companyfacts JSON (for transparency).
+- Summary bullets include inline reference tokens like `[ref:computed:valuation.value_per_share;table:Per-Year Detail;snap:<sha>]`; Critic validates these against present sections and snapshot hashes.
+- Citations: if provenance exists and no citations are passed, a minimal Citations section is auto-added.
 
 CLI Options
 - `--growth`, `--margin`, `--s2c`: comma‑separated paths; accepts percents (`"8%"`) or decimals (`0.08`).
 - `--config`: JSON or YAML file with any of: `growth`, `margin`, `s2c`, `horizon`, `discounting` (`end|midyear`), `beta`, `stable_growth`, `stable_margin`, `macro` (`risk_free_curve`, `erp`, `country_risk`).
 - `--fresh`: bypass caches and refetch companyfacts and macro.
 - `--html`: write a single‑file HTML report alongside Markdown and CSVs.
+- `--scenario`: load a scenario by name or path; see `docs/SCENARIOS.md`.
+- `--consensus`: JSON file with `revenue` and `ebit` arrays; maps to first two years.
+- `--peers`: JSON list with peer entries; used by comparables agent.
+- `--market-target`: choose target for market solver (default `last_close`).
+- `--cap-bps`: comparables policy cap in basis points (if scenario omits it).
+
+Caching & Offline
+- Companyfacts: caches to `out/<TICKER>/companyfacts.json` and reuses when not `--fresh`.
+- UST yields: caches to `out/<TICKER>/ust.csv` and reuses when network unavailable.
+- Prices: falls back to local `out/<TICKER>/prices.csv` (Stooq format) when offline.
+- All fallbacks are logged in `manifest.json` snapshots for audit.
+
+Golden Canaries
+- Use deterministic, seeded `InputsI` to detect regressions via artifact hashes.
+- See `docs/CANARIES.md`. Quick start:
+  - Place `canaries/SYN/inputs.json` (or other ticker folder)
+  - Generate goldens: `python scripts/write_canary.py canaries/SYN`
+  - Run acceptance: `pytest -q -k canaries_golden`
 
 Example `config.yaml`
 ```
@@ -98,3 +123,13 @@ Notes & Limits
 - IFRS coverage is pragmatic; tag coverage expands as needed.
 - WACC path = rf + (ERP + country risk) × beta; leverage/tax shield modeling is minimal in MVP.
 - EDGAR rate limits apply; set `EDGAR_UA` and be respectful with fetches.
+Batch Runs
+- Define jobs and optional default scenario in a plan file (YAML/JSON):
+```
+scenario: baseline
+jobs:
+  - { ticker: META, html: true }
+  - { ticker: AAPL, scenario: cautious }
+```
+- Dry run: `python scripts/run_batch.py path/to/plan.yaml`
+- Execute: `python scripts/run_batch.py path/to/plan.yaml --run`
