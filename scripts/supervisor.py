@@ -15,7 +15,7 @@ import numpy as np
 from investing_agent.agents.comparables import apply as comparables_apply
 from investing_agent.agents.consensus import apply as consensus_apply
 from investing_agent.agents.market import apply as market_apply
-from investing_agent.agents.plotting import plot_driver_paths, plot_sensitivity_heatmap
+from investing_agent.agents.plotting import plot_driver_paths, plot_sensitivity_heatmap, plot_pv_bridge, plot_price_vs_value
 from investing_agent.agents.router import choose_next
 from investing_agent.agents.sensitivity import compute_sensitivity
 from investing_agent.agents.valuation import build_inputs_from_fundamentals
@@ -172,6 +172,9 @@ def main():
         last_close = ps.bars[-1].close if ps.bars else None
         meta_prices = {"url": str(p), "retrieved_at": datetime.utcnow().isoformat() + "Z", "content_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest()}
         manifest.add_snapshot(Snapshot(source="prices_csv", url=meta_prices.get("url"), retrieved_at=meta_prices.get("retrieved_at"), content_sha256=meta_prices.get("content_sha256")))
+    elif args.offline:
+        # No prices available; skip market-last_close route
+        last_close = None
     else:
         try:
             ps, stooq_meta = fetch_prices_stooq_with_meta(ticker)
@@ -231,6 +234,15 @@ def main():
         ctx["unchanged_steps"] = ctx.get("unchanged_steps", 0) + 1 if prev_v == V.value_per_share else 0
         ctx["last_value"] = prev_v
 
+    # Build charts
+    bridge_png = plot_pv_bridge(V)
+    price_png = None
+    try:
+        if last_close is not None and ps and ps.bars:
+            price_png = plot_price_vs_value(ps, V.value_per_share, title=f"Price vs Value — {ticker}")
+    except Exception:
+        price_png = None
+
     # Citations
     citations: list[str] = []
     citations.append(f"EDGAR companyfacts: {meta.get('source_url')} (sha: {meta.get('content_sha256')})")
@@ -242,7 +254,7 @@ def main():
         citations.append(f"Yahoo prices: {yahoo_meta.get('url')} (sha: {yahoo_meta.get('content_sha256')})")
 
     # Render report
-    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, citations=citations, fundamentals=f)
+    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, citations=citations, fundamentals=f, pv_bridge_png=bridge_png, price_vs_value_png=price_png)
     (out_dir / "report.md").write_text(md)
     if args.html:
         from investing_agent.agents.html_writer import render_html_report
@@ -255,6 +267,9 @@ def main():
         (out_dir / "sensitivity.png").write_bytes(heat_png)
     if drv_png:
         (out_dir / "drivers.png").write_bytes(drv_png)
+    (out_dir / "pv_bridge.png").write_bytes(bridge_png)
+    if price_png:
+        (out_dir / "price_vs_value.png").write_bytes(price_png)
 
     manifest.add_artifact("report.md", md)
     manifest.write(out_dir / "manifest.json")

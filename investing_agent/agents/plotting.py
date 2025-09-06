@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from investing_agent.agents.sensitivity import SensitivityResult
+from investing_agent.schemas.prices import PriceSeries
+from investing_agent.schemas.valuation import ValuationV
 
 
 def plot_sensitivity_heatmap(res: SensitivityResult, title: str = "Sensitivity") -> bytes:
@@ -55,3 +57,38 @@ def plot_driver_paths(years: int, growth: np.ndarray, margin: np.ndarray, wacc: 
     plt.close(fig)
     return buf.getvalue()
 
+
+def plot_price_vs_value(ps: PriceSeries, value_per_share: float, title: str = "Price vs Value") -> bytes:
+    dates = [b.date for b in ps.bars]
+    closes = [b.close for b in ps.bars]
+    fig, ax = plt.subplots(figsize=(6, 3), dpi=150)
+    if dates and closes:
+        ax.plot(dates, closes, label="Price")
+    ax.axhline(value_per_share, color="red", linestyle="--", label="Intrinsic Value")
+    ax.set_title(title)
+    ax.set_ylabel("$ per share")
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="best")
+    buf = io.BytesIO()
+    fig.tight_layout()
+    fig.autofmt_xdate()
+    fig.savefig(buf, format="png")
+    plt.close(fig)
+    return buf.getvalue()
+
+
+def plot_pv_bridge(V: ValuationV, title: str = "PV Bridge") -> bytes:
+    labels = ["PV explicit", "PV terminal", "Op assets", "Net debt", "Cash non-op", "Equity"]
+    values = [V.pv_explicit, V.pv_terminal, V.pv_oper_assets, -V.net_debt, V.cash_nonop, V.equity_value]
+    colors = ["#4C78A8", "#F58518", "#54A24B", "#E45756", "#72B7B2", "#000000"]
+    fig, ax = plt.subplots(figsize=(6, 3), dpi=150)
+    ax.bar(labels, values, color=colors)
+    ax.set_title(title)
+    ax.set_ylabel("$")
+    ax.tick_params(axis='x', rotation=20)
+    ax.grid(True, axis='y', alpha=0.3)
+    buf = io.BytesIO()
+    fig.tight_layout()
+    fig.savefig(buf, format="png")
+    plt.close(fig)
+    return buf.getvalue()

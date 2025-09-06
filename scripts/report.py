@@ -311,11 +311,19 @@ def main():
     eventlog.log(agent="sensitivity", params={"steps": (5,5)}, outputs={"grid": [len(sens.margin_axis), len(sens.growth_axis)]}, duration_ms=int((_time.time()-t0)*1000))
 
     import numpy as np
+    from investing_agent.agents.plotting import plot_pv_bridge, plot_price_vs_value
 
     g = np.array(I.drivers.sales_growth)
     m = np.array(I.drivers.oper_margin)
     w = np.array(I.wacc)
     drv_png = plot_driver_paths(len(g), g, m, w)
+    bridge_png = plot_pv_bridge(V)
+    price_png = None
+    try:
+        if ps and ps.bars:
+            price_png = plot_price_vs_value(ps, V.value_per_share, title=f"Price vs Value — {ticker}")
+    except Exception:
+        price_png = None
 
     # Build citations for report
     citations: list[str] = []
@@ -338,7 +346,7 @@ def main():
         pass
 
     t0 = _time.time()
-    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, citations=citations, fundamentals=(f_for_report if 'f_for_report' in locals() else None))
+    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, citations=citations, fundamentals=(f_for_report if 'f_for_report' in locals() else None), pv_bridge_png=bridge_png, price_vs_value_png=price_png)
     eventlog.log(agent="writer_md", outputs={"bytes": len(md.encode('utf-8'))}, duration_ms=int((_time.time()-t0)*1000))
     if last_close is not None:
         md += f"\n\n## Market\n- Last close: {last_close:,.2f}\n- Discount/Premium vs value: {(V.value_per_share/last_close - 1.0):.2%}\n"
@@ -350,6 +358,9 @@ def main():
     manifest.add_artifact("report.md", md)
     (out_dir / "sensitivity.png").write_bytes(heat_png)
     (out_dir / "drivers.png").write_bytes(drv_png)
+    (out_dir / "pv_bridge.png").write_bytes(bridge_png)
+    if price_png:
+        (out_dir / "price_vs_value.png").write_bytes(price_png)
     # Also export per-year series CSV
     _write_series_csv(out_dir / "series.csv", I)
     try:

@@ -20,6 +20,8 @@ def render_report(
     driver_paths_png: Optional[bytes] = None,
     citations: Optional[List[str]] = None,
     fundamentals: Optional[Fundamentals] = None,
+    pv_bridge_png: Optional[bytes] = None,
+    price_vs_value_png: Optional[bytes] = None,
 ) -> str:
     """
     Create a Markdown report with detailed per-year numbers and embedded charts.
@@ -201,12 +203,18 @@ def render_report(
     # Optional embedded charts
     sens_md = _embed_png(sensitivity_png, "Sensitivity Heatmap")
     drv_md = _embed_png(driver_paths_png, "Driver Paths")
-    if sens_md or drv_md:
+    bridge_md = _embed_png(pv_bridge_png, "PV Bridge")
+    price_md = _embed_png(price_vs_value_png, "Price vs Value")
+    if sens_md or drv_md or bridge_md or price_md:
         lines.append("## Charts")
         if sens_md:
             lines.append(sens_md)
         if drv_md:
             lines.append(drv_md)
+        if bridge_md:
+            lines.append(bridge_md)
+        if price_md:
+            lines.append(price_md)
         lines.append("")
 
     # Provenance
