@@ -1,0 +1,16 @@
+{
+  "name": "news_heuristic_guidance_and_regulation",
+  "agent": "news",
+  "params": {
+    "caps": {"growth_bps": 50, "margin_bps": 30},
+    "bundle": {
+      "ticker": "EVAL",
+      "asof": "2025-09-03T00:00:00Z",
+      "items": [
+        {"id": "a", "title": "Company raises guidance for FY", "url": "u1", "source": "yahoo", "published_at": "2025-09-01T00:00:00Z"},
+        {"id": "b", "title": "New tariffs proposed on imports", "url": "u2", "source": "yahoo", "published_at": "2025-09-02T00:00:00Z"}
+      ]
+    }
+  },
+  "checks": {"min_impacts": 1}
+}

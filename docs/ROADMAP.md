@@ -27,7 +27,7 @@ This roadmap captures the end goal, success criteria, milestones, and current st
 - M3 Algorithm plan + agent rules: `docs/ALGORITHM.md`, `AGENTS.md` — DONE
 - M4 Deterministic router (rule‑based) returning next step + guards — DONE
 - M5 Agents v1 (code‑only): market/consensus/comparables bounded transforms — PARTIAL (market/comparables, consensus smoothing)
-- M6 News v1: deterministic retrieval; bounded ingest; optional deterministic summary — PENDING
+- M6 News v1: deterministic retrieval; bounded ingest; optional deterministic summary — PARTIAL (retrieval, heuristic summarize, ingestion, evals; LLM path pending with cassettes)
 - M7 Manifest snapshots extended: add UST and prices (URL + meta; hash when available) — DONE (size/content_type added)
 - M8 Citations enforcement: report maps claims to snapshot IDs or computed tables — DONE
 - M9 Golden fixtures & CI gates: canary tickers, acceptance checks, artifact hash pinning — PENDING

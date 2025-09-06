@@ -11,6 +11,7 @@ from investing_agent.schemas.fundamentals import Fundamentals
 
 from investing_agent.schemas.inputs import InputsI
 from investing_agent.schemas.valuation import ValuationV
+from investing_agent.schemas.news import NewsSummary
 
 
 def render_report(
@@ -22,6 +23,7 @@ def render_report(
     fundamentals: Optional[Fundamentals] = None,
     pv_bridge_png: Optional[bytes] = None,
     price_vs_value_png: Optional[bytes] = None,
+    news: Optional[NewsSummary] = None,
 ) -> str:
     """
     Create a Markdown report with detailed per-year numbers and embedded charts.
@@ -231,6 +233,25 @@ def render_report(
         if price_md:
             lines.append(price_md)
         lines.append("")
+
+    # News & Impacts
+    if news and (news.facts or news.impacts):
+        lines.append("")
+        lines.append("## News & Impacts")
+        if news.facts:
+            lines.append("**Facts:**")
+            for f in news.facts[:8]:
+                tag_str = f" [{', '.join(f.tags)}]" if getattr(f, 'tags', None) else ""
+                lines.append(f"- {f.title}{tag_str} ({f.published_at or ''}) — {f.url} [sha:{(f.content_sha256 or '')[:8]}]")
+        if news.impacts:
+            lines.append("")
+            lines.append("**Proposed Impacts (clamped):**")
+            lines.append("| Driver | Window | Delta | Confidence | Facts |")
+            lines.append("| --- | --- | --- | --- | --- |")
+            for imp in news.impacts[:8]:
+                window = f"Y+{imp.start_year_offset}→Y+{imp.end_year_offset}"
+                refs = ",".join(imp.fact_ids)
+                lines.append(f"| {imp.driver} | {window} | {imp.delta:+.4f} | {imp.confidence:.2f} | {refs} |")
 
     # Provenance
     lines.append("## Provenance")

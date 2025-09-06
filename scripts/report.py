@@ -12,6 +12,9 @@ from investing_agent.agents.valuation import build_inputs_from_fundamentals
 from investing_agent.agents.writer import render_report
 from investing_agent.agents.html_writer import render_html_report
 from investing_agent.agents.market import apply as market_apply
+from investing_agent.agents.news import heuristic_summarize, ingest_and_update as news_ingest
+from investing_agent.connectors.news import search_news as fetch_news
+from investing_agent.schemas.news import NewsBundle, NewsSummary
 from investing_agent.connectors.edgar import (
     fetch_companyfacts,
     parse_companyfacts_to_fundamentals,
@@ -168,6 +171,8 @@ def main():
     ap.add_argument("--market-target", choices=["none", "last_close"], default="last_close")
     ap.add_argument("--cap-bps", type=float, default=100.0, help="Comparables cap in bps if not set by scenario")
     ap.add_argument("--html", action="store_true", help="Also write HTML report next to Markdown")
+    ap.add_argument("--news", action="store_true", help="Include News agent (fetch recent RSS and propose impacts)")
+    ap.add_argument("--news-window", type=int, default=14, help="News recency window in days")
     args = ap.parse_args()
     if not args.ticker:
         raise SystemExit("Provide ticker as arg or set CT/TICKER")
@@ -545,8 +550,34 @@ def main():
     except Exception:
         pass
 
+    # Optional: News agent pipeline (offline-first)
+    news_summary: NewsSummary | None = None
+    if args.news:
+        # Try local bundle first
+        news_bundle: NewsBundle | None = None
+        local_news = out_dir / "news.json"
+        if local_news.exists() and not args.fresh:
+            try:
+                news_bundle = NewsBundle.model_validate_json(local_news.read_text())
+            except Exception:
+                news_bundle = None
+        if news_bundle is None:
+            try:
+                nb = fetch_news(ticker, window_days=int(args.news_window))
+                news_bundle = nb
+                (out_dir / "news.json").write_text(nb.model_dump_json(indent=2))
+            except Exception:
+                news_bundle = None
+        if news_bundle and news_bundle.items:
+            news_summary = heuristic_summarize(news_bundle, I, scenario=cfg)
+            I = news_ingest(I, V, news_summary, scenario=cfg)
+            V = kernel_value(I)  # update valuation after ingestion
+            bridge_png = plot_pv_bridge(V)
+            manifest.add_artifact("news.json", news_bundle.model_dump())
+            manifest.add_artifact("news_summary.json", news_summary.model_dump())
+
     t0 = _time.time()
-    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, citations=citations, fundamentals=(f_for_report if 'f_for_report' in locals() else None), pv_bridge_png=bridge_png, price_vs_value_png=price_png)
+    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, citations=citations, fundamentals=(f_for_report if 'f_for_report' in locals() else None), pv_bridge_png=bridge_png, price_vs_value_png=price_png, news=news_summary)
     # Scenario section (if provided)
     if args.scenario:
         md += "\n\n## Scenario\n"

@@ -17,6 +17,8 @@ from investing_agent.schemas.fundamentals import Fundamentals
 from investing_agent.agents.consensus import apply as consensus_apply
 from investing_agent.agents.comparables import apply as comparables_apply
 from investing_agent.agents.market import apply as market_apply
+from investing_agent.agents.news import heuristic_summarize
+from investing_agent.schemas.news import NewsBundle
 
 
 @dataclass
@@ -238,4 +240,40 @@ def run_case(path: Path) -> EvalResult:
         return run_comparables_case(case)
     if case.agent == "market":
         return run_market_case(case)
+    if case.agent == "news":
+        return run_news_case(case)
     raise NotImplementedError(f"Unsupported agent for eval: {case.agent}")
+
+
+def run_news_case(case: EvalCase) -> EvalResult:
+    p = case.params
+    caps = p.get("caps") or {"growth_bps": 50, "margin_bps": 30}
+    bundle = NewsBundle.model_validate(p.get("bundle") or {"ticker": "EVAL", "items": []})
+    # Use heuristic summarizer (no LLM in CI)
+    from investing_agent.schemas.inputs import InputsI, Drivers
+    I = InputsI(
+        company="EvalCo",
+        ticker=bundle.ticker,
+        currency="USD",
+        shares_out=1000.0,
+        tax_rate=0.25,
+        revenue_t0=1000.0,
+        drivers=Drivers(sales_growth=[0.05]*6, oper_margin=[0.15]*6, stable_growth=0.02, stable_margin=0.15),
+        sales_to_capital=[2.0]*6,
+        wacc=[0.06]*6,
+    )
+    summary = heuristic_summarize(bundle, I, scenario={"news_caps": caps})
+    failures: List[str] = []
+    if case.checks.get("min_impacts", 0) > 0 and len(summary.impacts) < int(case.checks["min_impacts"]):
+        failures.append("insufficient impacts")
+    # Bounds check: deltas must be within caps
+    cap_g = float(caps.get("growth_bps", 50))/10000.0
+    cap_m = float(caps.get("margin_bps", 30))/10000.0
+    for imp in summary.impacts:
+        if imp.driver == "growth" and abs(imp.delta) - cap_g > 1e-9:
+            failures.append("growth delta exceeds cap")
+        if imp.driver == "margin" and abs(imp.delta) - cap_m > 1e-9:
+            failures.append("margin delta exceeds cap")
+        if not imp.fact_ids:
+            failures.append("impact missing fact_ids")
+    return EvalResult(name=case.name, passed=len(failures)==0, failures=failures, details={"impacts": len(summary.impacts)})

@@ -152,12 +152,11 @@ Use this template when creating or updating an agent.
 - Provenance: Caller records consensus snapshot in manifest (`source=url/path`, `retrieved_at`, `content_sha256`).
 - Tests/Evals: `tests/unit/test_consensus.py`, `evals/consensus/cases/`.
 
-### Consensus
-- Name: Consensus (`investing_agent/agents/consensus.py::apply`)
-- Purpose: Map near-term consensus/guidance into `InputsI` while clamping long-term drivers.
-- Input schema: `InputsI`, `consensus_data` dict supporting either:
-  - Arrays `revenue` and `ebit` (map to growth/margin per year), and/or
-  - Arrays `growth` and `margin` (directly override first N years)
-- Output schema: `InputsI` (updated paths; per-element bounds enforced).
-- Provenance: Caller records consensus snapshot in manifest (`source=url/path`, `retrieved_at`, `content_sha256`).
-- Tests/Evals: `tests/unit/test_consensus.py`, `evals/consensus/cases/`.
+### News
+- Name: News (`investing_agent/agents/news.py` + `investing_agent/connectors/news.py`)
+- Purpose: Retrieve recent valuation-relevant news and propose bounded impacts to drivers.
+- Input schema: `ticker`, optional `asof`, optional source list; code takes `InputsI` + scenario caps to inform clamping.
+- Output schema: `NewsBundle`, `NewsSummary` (facts + impacts), and an updated `InputsI` after ingestion.
+- Retrieval: Deterministic RSS/Atom (e.g., Yahoo Finance); snapshots recorded in manifest.
+- LLM: Optional, deterministic (temp=0, top_p=1, seed=2025) for proposal generation; numeric changes always clamped in code.
+- Tests/Evals: unit tests for ingestion and heuristics; eval cases; LLM cassettes before enabling live calls in CI.
