@@ -173,6 +173,8 @@ def main():
     ap.add_argument("--html", action="store_true", help="Also write HTML report next to Markdown")
     ap.add_argument("--news", action="store_true", help="Include News agent (fetch recent RSS and propose impacts)")
     ap.add_argument("--news-window", type=int, default=14, help="News recency window in days")
+    ap.add_argument("--news-sources", help="Comma-separated RSS/Atom URLs for news sources (override defaults)")
+    ap.add_argument("--news-llm-cassette", help="Path to an LLM cassette JSON to summarize news deterministically")
     args = ap.parse_args()
     if not args.ticker:
         raise SystemExit("Provide ticker as arg or set CT/TICKER")
@@ -563,13 +565,30 @@ def main():
                 news_bundle = None
         if news_bundle is None:
             try:
-                nb = fetch_news(ticker, window_days=int(args.news_window))
+                # Sources from CLI or scenario
+                sources_arg = args.news_sources
+                srcs = None
+                if not sources_arg:
+                    scen_news = cfg.get("news") if isinstance(cfg.get("news"), dict) else {}
+                    scen_srcs = scen_news.get("sources") if isinstance(scen_news, dict) else None
+                    if isinstance(scen_srcs, list) and scen_srcs:
+                        srcs = [(f"src{i+1}", url) for i, url in enumerate(scen_srcs)]
+                else:
+                    urls = [u.strip() for u in sources_arg.split(",") if u.strip()]
+                    srcs = [(f"src{i+1}", url) for i, url in enumerate(urls)]
+                nb = fetch_news(ticker, window_days=int(args.news_window), sources=srcs)
                 news_bundle = nb
                 (out_dir / "news.json").write_text(nb.model_dump_json(indent=2))
             except Exception:
                 news_bundle = None
         if news_bundle and news_bundle.items:
-            news_summary = heuristic_summarize(news_bundle, I, scenario=cfg)
+            if args.news_llm_cassette:
+                from investing_agent.agents.news import llm_summarize
+                news_summary = llm_summarize(news_bundle, I, scenario=cfg, cassette_path=args.news_llm_cassette)
+                # Record model id used in manifest
+                manifest.models["news"] = "gpt-4.1-mini@deterministic:cassette"
+            else:
+                news_summary = heuristic_summarize(news_bundle, I, scenario=cfg)
             I = news_ingest(I, V, news_summary, scenario=cfg)
             V = kernel_value(I)  # update valuation after ingestion
             bridge_png = plot_pv_bridge(V)

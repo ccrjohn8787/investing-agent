@@ -1,0 +1,11 @@
+{
+  "facts": [
+    {"id": "f1", "title": "Earnings guide up", "url": "u1", "source": "yahoo", "published_at": "2025-09-01T00:00:00Z", "snippet": "", "content_sha256": "sha1", "tags": ["guidance"]},
+    {"id": "f2", "title": "Tariff risk rises", "url": "u2", "source": "yahoo", "published_at": "2025-09-02T00:00:00Z", "snippet": "", "content_sha256": "sha2", "tags": ["regulation"]}
+  ],
+  "impacts": [
+    {"driver": "growth", "start_year_offset": 0, "end_year_offset": 1, "delta": 0.0050, "confidence": 0.7, "rationale": "Guide up", "fact_ids": ["f1"]},
+    {"driver": "margin", "start_year_offset": 0, "end_year_offset": 0, "delta": -0.0030, "confidence": 0.6, "rationale": "Tariff risk", "fact_ids": ["f2"]}
+  ],
+  "notes": "cassette"
+}

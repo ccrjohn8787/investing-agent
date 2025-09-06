@@ -3,7 +3,7 @@ Scenario Configuration
 Overview
 - Scenarios provide deterministic, versioned knobs for report/supervisor runs.
 - They are YAML or JSON files loaded via `--scenario <name|path>`.
-- Use cases: set builder defaults, router gating, market solver weights/bounds, and comparables cap.
+- Use cases: set builder defaults, router gating, market solver weights/bounds, comparables caps, and news agent knobs.
 
 Schema (YAML)
 ```
@@ -38,6 +38,15 @@ market_solver:              # bounded least-squares settings
 
 comparables:                # peer policy caps
   cap_bps: 100              # move stable_margin ≤ 100 bps toward peer median per pass
+
+news:                       # News agent knobs (optional)
+  sources:                  # optional list of RSS/Atom feed URLs
+    - https://company.example.com/newsroom/rss
+  caps:
+    growth_bps: 50          # max ±bps per impact for growth (default 50)
+    margin_bps: 30          # max ±bps per impact for margin (default 30)
+    s2c_abs: 0.1            # max absolute change per impact for S2C (default 0.1)
+  min_confidence: 0.5       # drop impacts below this confidence (0..1)
 ```
 
 Locations
@@ -58,4 +67,3 @@ CLI Usage
 Determinism
 - Scenario content is recorded in `manifest.artifacts.scenario` (sha) to bind runs to settings.
 - All numeric effects remain code-only and reproducible.
-

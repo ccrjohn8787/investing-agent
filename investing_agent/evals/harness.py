@@ -262,7 +262,13 @@ def run_news_case(case: EvalCase) -> EvalResult:
         sales_to_capital=[2.0]*6,
         wacc=[0.06]*6,
     )
-    summary = heuristic_summarize(bundle, I, scenario={"news_caps": caps})
+    mode = (case.params.get("mode") or "heuristic").lower()
+    if mode == "llm":
+        cassette = case.params.get("cassette")
+        from investing_agent.agents.news import llm_summarize
+        summary = llm_summarize(bundle, I, scenario={"news": {"caps": caps}}, cassette_path=cassette)
+    else:
+        summary = heuristic_summarize(bundle, I, scenario={"news": {"caps": caps}})
     failures: List[str] = []
     if case.checks.get("min_impacts", 0) > 0 and len(summary.impacts) < int(case.checks["min_impacts"]):
         failures.append("insufficient impacts")

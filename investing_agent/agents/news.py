@@ -50,7 +50,8 @@ def heuristic_summarize(bundle: NewsBundle, I: InputsI, scenario: Optional[Dict[
         facts.append(NewsItem(**it.model_dump(exclude_none=True), tags=tags))
 
     # Scenario caps
-    caps = (scenario or {}).get("news_caps") or {}
+    news_cfg = (scenario or {}).get("news", {}) if isinstance(scenario, dict) else {}
+    caps = news_cfg.get("caps") or (scenario or {}).get("news_caps") or {}
     cap_g = float(caps.get("growth_bps", 50)) / 10000.0  # 50 bps default
     cap_m = float(caps.get("margin_bps", 30)) / 10000.0  # 30 bps default
     cap_s = float(caps.get("s2c_abs", 0.1))              # absolute
@@ -75,12 +76,16 @@ def ingest_and_update(I: InputsI, V: ValuationV, summary: NewsSummary, scenario:
     m = list(J.drivers.oper_margin)
     s2c = list(J.sales_to_capital)
 
-    caps = (scenario or {}).get("news_caps") or {}
+    news_cfg = (scenario or {}).get("news", {}) if isinstance(scenario, dict) else {}
+    caps = news_cfg.get("caps") or (scenario or {}).get("news_caps") or {}
+    min_conf = float(news_cfg.get("min_confidence", 0.0))
     cap_g = float(caps.get("growth_bps", 50)) / 10000.0
     cap_m = float(caps.get("margin_bps", 30)) / 10000.0
     cap_s = float(caps.get("s2c_abs", 0.1))
 
     for imp in summary.impacts:
+        if imp.confidence is not None and float(imp.confidence) < min_conf:
+            continue
         a = max(0, int(imp.start_year_offset))
         b = max(a, min(T - 1, int(imp.end_year_offset)))
         if imp.driver == "growth":
@@ -104,3 +109,28 @@ def ingest_and_update(I: InputsI, V: ValuationV, summary: NewsSummary, scenario:
     J.sales_to_capital = s2c
     return J
 
+
+def llm_summarize(
+    bundle: NewsBundle,
+    I: InputsI,
+    scenario: Optional[Dict[str, Any]] = None,
+    *,
+    cassette_path: Optional[str] = None,
+    model_id: str = "gpt-4.1-mini",
+) -> NewsSummary:
+    """
+    Deterministic LLM summarizer shim.
+    - If cassette_path is provided, load JSON as NewsSummary.
+    - Otherwise, fall back to heuristic summarizer.
+    Note: Live LLM calls are not performed in CI.
+    """
+    if cassette_path:
+        try:
+            from pathlib import Path
+            text = Path(cassette_path).read_text()
+            import json
+            data = json.loads(text)
+            return NewsSummary.model_validate(data)
+        except Exception:
+            pass
+    return heuristic_summarize(bundle, I, scenario=scenario)

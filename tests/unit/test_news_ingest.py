@@ -46,3 +46,17 @@ def test_news_ingest_applies_bounded_impacts():
     # No out-of-bounds
     assert all(-0.99 <= g <= 0.60 for g in I2.drivers.sales_growth)
     assert all(0.0 <= m <= 0.60 for m in I2.drivers.oper_margin)
+
+
+def test_news_ingest_respects_min_confidence():
+    I = base_inputs()
+    V = kernel_value(I)
+    items = [NewsItem(id="x", title="Company raises guidance", url="u", source="s", published_at="2025-09-01T00:00:00Z")]
+    bundle = NewsBundle(ticker="NWS", asof="2025-09-03T00:00:00Z", items=items)
+    summary = heuristic_summarize(bundle, I, scenario={"news": {"caps": {"growth_bps": 50}}})
+    # Force low confidence on impacts
+    for imp in summary.impacts:
+        imp.confidence = 0.2
+    I2 = ingest_and_update(I, V, summary, scenario={"news": {"caps": {"growth_bps": 50}, "min_confidence": 0.5}})
+    # No changes applied because impacts below threshold
+    assert I2.drivers.sales_growth == I.drivers.sales_growth

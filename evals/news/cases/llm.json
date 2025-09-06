@@ -1,0 +1,18 @@
+{
+  "name": "news_llm_cassette_summary",
+  "agent": "news",
+  "params": {
+    "mode": "llm",
+    "caps": {"growth_bps": 50, "margin_bps": 30},
+    "cassette": "evals/news/cassettes/sample_summary.json",
+    "bundle": {
+      "ticker": "EVAL",
+      "asof": "2025-09-03T00:00:00Z",
+      "items": [
+        {"id": "f1", "title": "Earnings guide up", "url": "u1", "source": "yahoo", "published_at": "2025-09-01T00:00:00Z"},
+        {"id": "f2", "title": "Tariff risk rises", "url": "u2", "source": "yahoo", "published_at": "2025-09-02T00:00:00Z"}
+      ]
+    }
+  },
+  "checks": {"min_impacts": 1}
+}
