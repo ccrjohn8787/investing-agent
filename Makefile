@@ -17,6 +17,13 @@ ci:
 eval:
 	pytest -q -m eval
 
+# Golden canaries
+golden:
+	python scripts/write_canary.py $(PATH)
+
+golden_check:
+	pytest -q -k canaries_golden
+
 demo:
 	python scripts/run_synthetic.py
 

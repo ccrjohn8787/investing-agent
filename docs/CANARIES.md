@@ -15,6 +15,7 @@ Artifacts to hash
 Updating goldens
 - Generate artifacts locally and write/update `golden.json` with `scripts/write_canary.py`:
   - `python scripts/write_canary.py canaries/SYN`
+  - Or via Make: `make golden PATH=canaries/SYN`
   - Review diff and commit.
 
 CI gating
@@ -22,5 +23,5 @@ CI gating
   - Load `inputs.json`, compute valuation and render report
   - Run Critic checks to ensure hygiene
   - Compute sha256 for selected artifacts and compare with `golden.json`
-  - If `golden.json` is missing, the test is skipped (add golden to enable gating)
-
+- If `golden.json` is missing, the test is skipped (add golden to enable gating)
+- Use `make golden_check` to run only the canary acceptance gate.

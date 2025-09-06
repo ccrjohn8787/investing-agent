@@ -26,11 +26,11 @@ This roadmap captures the end goal, success criteria, milestones, and current st
 - M2 Audit & provenance: `run.jsonl` event log + `manifest.json` with EDGAR snapshot — DONE
 - M3 Algorithm plan + agent rules: `docs/ALGORITHM.md`, `AGENTS.md` — DONE
 - M4 Deterministic router (rule‑based) returning next step + guards — DONE
-- M5 Agents v1 (code‑only): market/consensus/comparables bounded transforms — PARTIAL (market/comparables, consensus smoothing)
+- M5 Agents v1 (code‑only): market/consensus/comparables bounded transforms — DONE (market solver, comparables cap, consensus mapping + smoothing; evals/tests)
 - M6 News v1: deterministic retrieval; bounded ingest; optional deterministic summary — DONE (heuristics + cassette-based LLM evals; CLI/supervisor integration; tests/evals)
 - M7 Manifest snapshots extended: add UST and prices (URL + meta; hash when available) — DONE (size/content_type added)
 - M8 Citations enforcement: report maps claims to snapshot IDs or computed tables — DONE
-- M9 Golden fixtures & CI gates: canary tickers, acceptance checks, artifact hash pinning — PENDING
+- M9 Golden fixtures & CI gates: canary tickers, acceptance checks, artifact hash pinning — DONE (infrastructure: writer script, acceptance test, Make targets; add/maintain goldens via team policy)
 - M10 CLI polish: scenario YAML, multi‑ticker batch, richer flags; CSV/JSON exports — DONE (scenario + batch + flags)
 - M11 Caching & performance: local caches with revalidation; parallel fetch where safe — PENDING
 - M12 Writer/Critic (LLM) gating: deterministic prompts; critic blocks unsafe changes — PENDING

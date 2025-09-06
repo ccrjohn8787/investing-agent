@@ -1,0 +1,22 @@
+{
+  "name": "comparables_cap_limits_adjustment",
+  "agent": "comparables",
+  "params": {
+    "company": "EvalCo",
+    "ticker": "EVAL",
+    "currency": "USD",
+    "revenue_t0": 1000.0,
+    "ebit_t0": 120.0,
+    "shares_out": 1000,
+    "tax_rate": 0.25,
+    "horizon": 6,
+    "stable_margin": 0.10,
+    "peers": [
+      {"ticker": "PEER1", "stable_margin": 0.25},
+      {"ticker": "PEER2", "stable_margin": 0.26},
+      {"ticker": "PEER3", "stable_margin": 0.27}
+    ],
+    "policy": {"cap_bps": 50}
+  },
+  "checks": { "tol": 1e-6 }
+}
