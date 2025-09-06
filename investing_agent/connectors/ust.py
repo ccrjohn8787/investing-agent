@@ -7,6 +7,7 @@ from io import StringIO
 from typing import Dict, List, Optional
 
 import requests
+from investing_agent.connectors.http_cache import fetch_text as cached_fetch
 
 
 TREASURY_YIELD_CSV = (
@@ -43,7 +44,7 @@ def fetch_treasury_yield_csv(url: str = TREASURY_YIELD_CSV, session: Optional[re
     return []
 
 
-def fetch_treasury_yield_csv_with_meta(url: str = TREASURY_YIELD_CSV, session: Optional[requests.Session] = None) -> tuple[List[dict], dict]:
+def fetch_treasury_yield_csv_with_meta(url: str = TREASURY_YIELD_CSV, session: Optional[requests.Session] = None, ttl_seconds: int = 86400) -> tuple[List[dict], dict]:
     """
     Like fetch_treasury_yield_csv, but also returns a meta dict with {url, retrieved_at, content_sha256}.
     On failure, returns ([], {url, retrieved_at, content_sha256: None}).
@@ -52,17 +53,15 @@ def fetch_treasury_yield_csv_with_meta(url: str = TREASURY_YIELD_CSV, session: O
     urls = [url] + TREASURY_YIELD_FALLBACKS
     for u in urls:
         try:
-            resp = sess.get(u, timeout=30)
-            resp.raise_for_status()
-            text = resp.text
+            text, meta_cached = cached_fetch(u, ttl_seconds=ttl_seconds, session=sess, timeout=30)
             reader = csv.DictReader(StringIO(text))
             rows = [r for r in reader]
             meta = {
                 "url": u,
-                "retrieved_at": datetime.utcnow().isoformat() + "Z",
-                "content_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                "retrieved_at": meta_cached.get("retrieved_at"),
+                "content_sha256": meta_cached.get("content_sha256"),
                 "size": len(text.encode("utf-8")),
-                "content_type": resp.headers.get("Content-Type", "text/csv"),
+                "content_type": "text/csv",
             }
             return rows, meta
         except Exception:

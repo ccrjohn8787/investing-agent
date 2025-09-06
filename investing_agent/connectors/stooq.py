@@ -7,6 +7,7 @@ from io import StringIO
 from typing import Optional
 
 import requests
+from investing_agent.connectors.http_cache import fetch_text as cached_fetch
 
 from investing_agent.schemas.prices import PriceBar, PriceSeries
 
@@ -19,12 +20,7 @@ def _stooq_url_us(ticker: str) -> str:
     return f"https://stooq.com/q/d/l/?s={t}&i=d"
 
 
-def fetch_prices(ticker: str, session: Optional[requests.Session] = None) -> PriceSeries:
-    url = _stooq_url_us(ticker)
-    sess = session or requests.Session()
-    resp = sess.get(url, timeout=30)
-    resp.raise_for_status()
-    text = resp.text
+def _parse_prices_text(ticker: str, text: str) -> PriceSeries:
     reader = csv.DictReader(StringIO(text))
     bars = []
     for row in reader:
@@ -43,21 +39,26 @@ def fetch_prices(ticker: str, session: Optional[requests.Session] = None) -> Pri
     return PriceSeries(ticker=ticker.upper(), bars=bars)
 
 
-def fetch_prices_with_meta(ticker: str, session: Optional[requests.Session] = None) -> tuple[PriceSeries, dict]:
+def fetch_prices(ticker: str, session: Optional[requests.Session] = None, ttl_seconds: int = 86400) -> PriceSeries:
+    url = _stooq_url_us(ticker)
+    sess = session or requests.Session()
+    text, _meta = cached_fetch(url, ttl_seconds=ttl_seconds, session=sess, timeout=30)
+    return _parse_prices_text(ticker, text)
+
+
+def fetch_prices_with_meta(ticker: str, session: Optional[requests.Session] = None, ttl_seconds: int = 86400) -> tuple[PriceSeries, dict]:
     """
     Fetch Stooq CSV and return (PriceSeries, meta) where meta includes {url, retrieved_at, content_sha256}.
     """
     url = _stooq_url_us(ticker)
     sess = session or requests.Session()
-    resp = sess.get(url, timeout=30)
-    resp.raise_for_status()
-    text = resp.text
-    ps = fetch_prices(ticker, session=sess)
+    text, meta_cached = cached_fetch(url, ttl_seconds=ttl_seconds, session=sess, timeout=30)
+    ps = _parse_prices_text(ticker, text)
     meta = {
         "url": url,
-        "retrieved_at": datetime.utcnow().isoformat() + "Z",
+        "retrieved_at": meta_cached.get("retrieved_at"),
         "content_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
         "size": len(text.encode("utf-8")),
-        "content_type": resp.headers.get("Content-Type", "text/csv"),
+        "content_type": "text/csv",
     }
     return ps, meta

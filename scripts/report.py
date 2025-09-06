@@ -420,23 +420,57 @@ def main():
     except Exception:
         pass
 
-    # Try prices via Stooq; fallback to Yahoo, and degrade gracefully offline
+    # Try prices via Stooq; fallback to Yahoo, and degrade gracefully offline.
+    # Parallelize price fetching and sensitivity computation to reduce wall time.
     from investing_agent.schemas.prices import PriceSeries
     stooq_meta = None
     yahoo_meta = None
-    try:
-        t0 = _time.time()
-        ps, stooq_meta = fetch_prices_stooq_with_meta(ticker)
-        eventlog.log(agent="prices", params={"source": "stooq"}, outputs={"bars": len(ps.bars)}, duration_ms=int((_time.time()-t0)*1000))
-        manifest.add_snapshot(Snapshot(source="stooq", url=stooq_meta.get("url"), retrieved_at=stooq_meta.get("retrieved_at"), content_sha256=stooq_meta.get("content_sha256"), size=stooq_meta.get("size"), content_type=stooq_meta.get("content_type")))
-    except Exception:
+    def _fetch_prices() -> tuple[PriceSeries, Optional[dict], Optional[dict]]:
         try:
             t0 = _time.time()
-            ps, yahoo_meta = fetch_prices_v8_chart_with_meta(ticker)
-            eventlog.log(agent="prices", params={"source": "yahoo"}, outputs={"bars": len(ps.bars)}, duration_ms=int((_time.time()-t0)*1000))
-            manifest.add_snapshot(Snapshot(source="yahoo", url=yahoo_meta.get("url"), retrieved_at=yahoo_meta.get("retrieved_at"), content_sha256=yahoo_meta.get("content_sha256"), size=yahoo_meta.get("size"), content_type=yahoo_meta.get("content_type")))
+            p, meta_s = fetch_prices_stooq_with_meta(ticker)
+            eventlog.log(agent="prices", params={"source": "stooq"}, outputs={"bars": len(p.bars)}, duration_ms=int((_time.time()-t0)*1000))
+            return p, meta_s, None
         except Exception:
-            ps = PriceSeries(ticker=ticker, bars=[])
+            try:
+                t0 = _time.time()
+                p, meta_y = fetch_prices_v8_chart_with_meta(ticker)
+                eventlog.log(agent="prices", params={"source": "yahoo"}, outputs={"bars": len(p.bars)}, duration_ms=int((_time.time()-t0)*1000))
+                return p, None, meta_y
+            except Exception:
+                return PriceSeries(ticker=ticker, bars=[]), None, None
+
+    # Launch price fetch concurrently
+    ps = None
+    try:
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            fut_prices = ex.submit(_fetch_prices)
+            # Compute sensitivity while fetching prices
+            t0 = _time.time()
+            sens = compute_sensitivity(I, growth_delta=0.02, margin_delta=0.01, steps=(5, 5))
+            heat_png = plot_sensitivity_heatmap(sens, title=f"Sensitivity — {ticker}")
+            eventlog.log(agent="sensitivity", params={"steps": (5,5)}, outputs={"grid": [len(sens.margin_axis), len(sens.growth_axis)]}, duration_ms=int((_time.time()-t0)*1000))
+            ps, stooq_meta, yahoo_meta = fut_prices.result()
+    except Exception:
+        # Fallback to sequential if threadpool not available or errors occurred
+        try:
+            t0 = _time.time()
+            ps, stooq_meta = fetch_prices_stooq_with_meta(ticker)
+            eventlog.log(agent="prices", params={"source": "stooq"}, outputs={"bars": len(ps.bars)}, duration_ms=int((_time.time()-t0)*1000))
+        except Exception:
+            try:
+                t0 = _time.time()
+                ps, yahoo_meta = fetch_prices_v8_chart_with_meta(ticker)
+                eventlog.log(agent="prices", params={"source": "yahoo"}, outputs={"bars": len(ps.bars)}, duration_ms=int((_time.time()-t0)*1000))
+            except Exception:
+                ps = PriceSeries(ticker=ticker, bars=[])
+        # Sensitivity sequential (if not done)
+        t0 = _time.time()
+        sens = compute_sensitivity(I, growth_delta=0.02, margin_delta=0.01, steps=(5, 5))
+        heat_png = plot_sensitivity_heatmap(sens, title=f"Sensitivity — {ticker}")
+        eventlog.log(agent="sensitivity", params={"steps": (5,5)}, outputs={"grid": [len(sens.margin_axis), len(sens.growth_axis)]}, duration_ms=int((_time.time()-t0)*1000))
     # Local fallback: out/<TICKER>/prices.csv (Stooq format)
     if not ps.bars:
         try:
@@ -466,10 +500,14 @@ def main():
             pass
     last_close = ps.bars[-1].close if ps.bars else None
 
-    t0 = _time.time()
-    sens = compute_sensitivity(I, growth_delta=0.02, margin_delta=0.01, steps=(5, 5))
-    heat_png = plot_sensitivity_heatmap(sens, title=f"Sensitivity — {ticker}")
-    eventlog.log(agent="sensitivity", params={"steps": (5,5)}, outputs={"grid": [len(sens.margin_axis), len(sens.growth_axis)]}, duration_ms=int((_time.time()-t0)*1000))
+    # Record price feed snapshot
+    try:
+        if stooq_meta:
+            manifest.add_snapshot(Snapshot(source="stooq", url=stooq_meta.get("url"), retrieved_at=stooq_meta.get("retrieved_at"), content_sha256=stooq_meta.get("content_sha256"), size=stooq_meta.get("size"), content_type=stooq_meta.get("content_type")))
+        elif yahoo_meta:
+            manifest.add_snapshot(Snapshot(source="yahoo", url=yahoo_meta.get("url"), retrieved_at=yahoo_meta.get("retrieved_at"), content_sha256=yahoo_meta.get("content_sha256"), size=yahoo_meta.get("size"), content_type=yahoo_meta.get("content_type")))
+    except Exception:
+        pass
 
     import numpy as np
     from investing_agent.agents.plotting import plot_pv_bridge, plot_price_vs_value
