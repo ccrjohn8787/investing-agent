@@ -61,6 +61,10 @@ Reports
 - Apply consensus (near-term revenue/EBIT): `--consensus path/to/consensus.json`.
 - Apply comparables (peer list): `--peers path/to/peers.json` (cap via scenario `comparables.cap_bps` or `--cap-bps`).
 - Market solver target: `--market-target last_close|none` when scenario enables market.
+- Include News: `--news` to fetch recent RSS and propose impacts.
+  - `--news-window <days>` to set recency window (default 14)
+  - `--news-sources <url1,url2>` to override default feeds
+  - `--news-llm-cassette <path>` to summarize via deterministic cassette
 
 Artifacts
 - Markdown: `out/<TICKER>/report.md`

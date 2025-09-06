@@ -20,6 +20,9 @@ from investing_agent.agents.router import choose_next
 from investing_agent.agents.sensitivity import compute_sensitivity
 from investing_agent.agents.valuation import build_inputs_from_fundamentals
 from investing_agent.agents.writer import render_report
+from investing_agent.agents.news import heuristic_summarize, ingest_and_update as news_ingest, llm_summarize
+from investing_agent.connectors.news import search_news as fetch_news
+from investing_agent.schemas.news import NewsBundle, NewsSummary
 from investing_agent.connectors import ust as ust_mod
 from investing_agent.connectors.edgar import (
     fetch_companyfacts,
@@ -66,6 +69,9 @@ def main():
     ap.add_argument("--companyfacts-json", help="Path to local EDGAR companyfacts JSON (default: out/<TICKER>/companyfacts.json)")
     ap.add_argument("--ust-csv", help="Path to local UST CSV (Treasury yield curve)")
     ap.add_argument("--prices-csv", help="Path to local prices CSV (Stooq format: Date,Open,High,Low,Close,Volume)")
+    ap.add_argument("--news-window", type=int, default=14, help="News recency window in days")
+    ap.add_argument("--news-sources", help="Comma-separated RSS/Atom URLs for news sources (override defaults)")
+    ap.add_argument("--news-llm-cassette", help="Path to an LLM cassette JSON to summarize news deterministically")
     args = ap.parse_args()
     if not args.ticker:
         raise SystemExit("Provide ticker as arg or set CT/TICKER")
@@ -276,6 +282,49 @@ def main():
             cap_bps = float(comp_cfg.get("cap_bps", float(args.cap_bps)))
             I = comparables_apply(I, peers=peers, policy={"cap_bps": cap_bps})
             V = kernel_value(I)
+        elif route == "news" and bool(router_cfg.get("enable_news", False)):
+            # News agent step (offline-first)
+            news_bundle: NewsBundle | None = None
+            local_news = out_dir / "news.json"
+            if local_news.exists() and args.offline:
+                try:
+                    news_bundle = NewsBundle.model_validate_json(local_news.read_text())
+                except Exception:
+                    news_bundle = None
+            if news_bundle is None and not args.offline:
+                try:
+                    sources_arg = args.news_sources
+                    srcs = None
+                    if not sources_arg:
+                        scen_news = cfg.get("news") if isinstance(cfg.get("news"), dict) else {}
+                        scen_srcs = scen_news.get("sources") if isinstance(scen_news, dict) else None
+                        if isinstance(scen_srcs, list) and scen_srcs:
+                            srcs = [(f"src{i+1}", url) for i, url in enumerate(scen_srcs)]
+                    else:
+                        urls = [u.strip() for u in sources_arg.split(",") if u.strip()]
+                        srcs = [(f"src{i+1}", url) for i, url in enumerate(urls)]
+                    nb, metas = fetch_news(ticker, window_days=int(args.news_window), sources=srcs)
+                    news_bundle = nb
+                    (out_dir / "news.json").write_text(nb.model_dump_json(indent=2))
+                    for meta in metas:
+                        try:
+                            manifest.add_snapshot(Snapshot(source="news", url=meta.get("url"), retrieved_at=meta.get("retrieved_at"), content_sha256=meta.get("content_sha256")))
+                        except Exception:
+                            pass
+                except Exception:
+                    news_bundle = None
+            if news_bundle and news_bundle.items:
+                if args.news_llm_cassette:
+                    summary = llm_summarize(news_bundle, I, scenario=cfg, cassette_path=args.news_llm_cassette)
+                    manifest.models["news"] = "gpt-4.1-mini@deterministic:cassette"
+                else:
+                    summary = heuristic_summarize(news_bundle, I, scenario=cfg)
+                I = news_ingest(I, V, summary, scenario=cfg)
+                V = kernel_value(I)
+                try:
+                    (out_dir / "news_summary.json").write_text(summary.model_dump_json(indent=2))
+                except Exception:
+                    pass
         elif route == "sensitivity":
             sens = compute_sensitivity(I)
             heat_png = plot_sensitivity_heatmap(sens, title=f"Sensitivity — {I.ticker}")
