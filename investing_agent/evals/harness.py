@@ -14,6 +14,8 @@ from investing_agent.agents.writer import render_report
 from investing_agent.agents.valuation import build_inputs_from_fundamentals
 from investing_agent.kernels.ginzu import value as kernel_value
 from investing_agent.schemas.fundamentals import Fundamentals
+from investing_agent.agents.consensus import apply as consensus_apply
+from investing_agent.agents.comparables import apply as comparables_apply
 
 
 @dataclass
@@ -81,8 +83,99 @@ def run_writer_case(case: EvalCase) -> EvalResult:
     )
 
 
+def run_consensus_case(case: EvalCase) -> EvalResult:
+    p = case.params
+    # Base fundamentals and consensus inputs
+    rev0 = float(p.get("revenue_t0", 1000.0))
+    rev1 = float(p.get("consensus", {}).get("revenue_y1", 1100.0))
+    rev2 = float(p.get("consensus", {}).get("revenue_y2", 1210.0))
+    ebit1 = float(p.get("consensus", {}).get("ebit_y1", 150.0))
+    ebit2 = float(p.get("consensus", {}).get("ebit_y2", 170.0))
+    f = Fundamentals(
+        company=p.get("company", "EvalCo"),
+        ticker=p.get("ticker", "EVAL"),
+        currency=p.get("currency", "USD"),
+        revenue={2023: rev0},
+        ebit={2023: float(p.get("ebit_t0", 120.0))},
+        shares_out=float(p.get("shares_out", 1000.0)),
+        tax_rate=float(p.get("tax_rate", 0.25)),
+    )
+    horizon = int(p.get("horizon", 6))
+    I = build_inputs_from_fundamentals(f, horizon=horizon)
+    consensus_data = {"revenue": [rev1, rev2], "ebit": [ebit1, ebit2]}
+
+    J = consensus_apply(I, consensus_data)
+
+    # Expected mapping: g1=(rev1-rev0)/rev0; g2=(rev2-rev1)/rev1; m1=ebit1/rev1; m2=ebit2/rev2
+    exp_g1 = (rev1 - rev0) / rev0 if rev0 else 0.0
+    exp_g2 = (rev2 - rev1) / rev1 if rev1 else 0.0
+    exp_m1 = (ebit1 / rev1) if rev1 else 0.0
+    exp_m2 = (ebit2 / rev2) if rev2 else 0.0
+
+    tol = float(case.checks.get("tol", 1e-6))
+    failures: List[str] = []
+    try:
+        if abs(J.drivers.sales_growth[0] - exp_g1) > tol:
+            failures.append(f"g1 mismatch: got {J.drivers.sales_growth[0]:.6f}, exp {exp_g1:.6f}")
+        if abs(J.drivers.sales_growth[1] - exp_g2) > tol:
+            failures.append(f"g2 mismatch: got {J.drivers.sales_growth[1]:.6f}, exp {exp_g2:.6f}")
+        if abs(J.drivers.oper_margin[0] - exp_m1) > tol:
+            failures.append(f"m1 mismatch: got {J.drivers.oper_margin[0]:.6f}, exp {exp_m1:.6f}")
+        if abs(J.drivers.oper_margin[1] - exp_m2) > tol:
+            failures.append(f"m2 mismatch: got {J.drivers.oper_margin[1]:.6f}, exp {exp_m2:.6f}")
+    except Exception as e:
+        failures.append(f"exception during checks: {e}")
+
+    return EvalResult(name=case.name, passed=len(failures) == 0, failures=failures, details={})
+
+
+def run_comparables_case(case: EvalCase) -> EvalResult:
+    p = case.params
+    f = Fundamentals(
+        company=p.get("company", "EvalCo"),
+        ticker=p.get("ticker", "EVAL"),
+        currency=p.get("currency", "USD"),
+        revenue={2023: float(p.get("revenue_t0", 1000.0))},
+        ebit={2023: float(p.get("ebit_t0", 120.0))},
+        shares_out=float(p.get("shares_out", 1000.0)),
+        tax_rate=float(p.get("tax_rate", 0.25)),
+    )
+    horizon = int(p.get("horizon", 6))
+    I = build_inputs_from_fundamentals(f, horizon=horizon)
+    # Apply base stable margin if provided
+    if "stable_margin" in p:
+        I.drivers.stable_margin = float(p["stable_margin"])
+    peers = p.get("peers", [])
+    policy = p.get("policy", {"cap_bps": 100})
+    J = comparables_apply(I, peers=peers, policy=policy)
+
+    # Expected: move stable margin toward median by at most cap
+    cap = float(policy.get("cap_bps", 100)) / 10000.0
+    if peers:
+        sm0 = float(I.drivers.stable_margin)
+        med = sorted([float(x["stable_margin"]) for x in peers])[len(peers)//2]
+        gap = med - sm0
+        exp = sm0 + max(-cap, min(cap, gap))
+    else:
+        exp = float(I.drivers.stable_margin)
+
+    tol = float(case.checks.get("tol", 1e-6))
+    failures: List[str] = []
+    try:
+        if abs(J.drivers.stable_margin - exp) > tol:
+            failures.append(f"stable_margin mismatch: got {J.drivers.stable_margin:.6f}, exp {exp:.6f}")
+    except Exception as e:
+        failures.append(f"exception during checks: {e}")
+
+    return EvalResult(name=case.name, passed=len(failures) == 0, failures=failures, details={})
+
+
 def run_case(path: Path) -> EvalResult:
     case = load_case(path)
     if case.agent == "writer":
         return run_writer_case(case)
+    if case.agent == "consensus":
+        return run_consensus_case(case)
+    if case.agent == "comparables":
+        return run_comparables_case(case)
     raise NotImplementedError(f"Unsupported agent for eval: {case.agent}")
