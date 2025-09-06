@@ -6,6 +6,7 @@ Purpose
 Layout
 - `canaries/<TICKER>/inputs.json` — seeded `InputsI` JSON
 - `canaries/<TICKER>/golden.json` — expected artifact hashes (see writer below)
+  - Example seed included: `canaries/SYN/inputs.json`.
 
 Artifacts to hash
 - `valuation` — JSON of `ValuationV`
