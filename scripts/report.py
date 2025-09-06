@@ -576,9 +576,15 @@ def main():
                 else:
                     urls = [u.strip() for u in sources_arg.split(",") if u.strip()]
                     srcs = [(f"src{i+1}", url) for i, url in enumerate(urls)]
-                nb = fetch_news(ticker, window_days=int(args.news_window), sources=srcs)
+                nb, metas = fetch_news(ticker, window_days=int(args.news_window), sources=srcs)
                 news_bundle = nb
                 (out_dir / "news.json").write_text(nb.model_dump_json(indent=2))
+                # Record snapshots for sources
+                try:
+                    for meta in metas:
+                        manifest.add_snapshot(Snapshot(source="news", url=meta.get("url"), retrieved_at=meta.get("retrieved_at"), content_sha256=meta.get("content_sha256")))
+                except Exception:
+                    pass
             except Exception:
                 news_bundle = None
         if news_bundle and news_bundle.items:

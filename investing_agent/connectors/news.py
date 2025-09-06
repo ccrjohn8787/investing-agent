@@ -16,10 +16,20 @@ def _hash_text(*parts: str) -> str:
 
 
 def default_sources(ticker: str) -> List[Tuple[str, str]]:
-    # (name, url). Yahoo Finance RSS per ticker
-    return [
-        ("yahoo", f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={ticker}")
-    ]
+    # (name, url). Yahoo Finance RSS per ticker and optional EDGAR 8-K Atom if CIK resolved.
+    out: List[Tuple[str, str]] = [("yahoo", f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={ticker}")]
+    try:
+        # Resolve CIK and add SEC Atom feed for 8-Ks
+        from investing_agent.connectors.edgar import _resolve_cik10  # type: ignore
+
+        cik10 = _resolve_cik10(ticker)
+        url = (
+            f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik10}&type=8-K&owner=exclude&count=40&output=atom"
+        )
+        out.append(("edgar-8k", url))
+    except Exception:
+        pass
+    return out
 
 
 def _parse_rss(xml_text: str, source: str) -> List[dict]:
@@ -72,17 +82,25 @@ def fetch_rss(url: str, session: Optional[requests.Session] = None, timeout: int
     return items, meta
 
 
-def search_news(ticker: str, asof: Optional[str] = None, sources: Optional[List[Tuple[str, str]]] = None, max_items: int = 25, window_days: int = 14) -> NewsBundle:
+def search_news(
+    ticker: str,
+    asof: Optional[str] = None,
+    sources: Optional[List[Tuple[str, str]]] = None,
+    max_items: int = 25,
+    window_days: int = 14,
+) -> Tuple[NewsBundle, List[dict]]:
     srcs = sources or default_sources(ticker)
     items_all: List[NewsItem] = []
     asof_dt = datetime.fromisoformat(asof.replace("Z", "+00:00")) if (asof and asof.endswith("Z")) else (datetime.utcnow().replace(tzinfo=timezone.utc))
     cutoff = asof_dt - timedelta(days=window_days)
     sess = requests.Session()
+    metas: List[dict] = []
     for name, url in srcs:
         try:
             items, _meta = fetch_rss(url, session=sess)
         except Exception:
             continue
+        metas.append(_meta)
         for it in items:
             pub = it.get("published_at") or ""
             try:
@@ -119,5 +137,4 @@ def search_news(ticker: str, asof: Optional[str] = None, sources: Optional[List[
         uniq.append(it)
         if len(uniq) >= max_items:
             break
-    return NewsBundle(ticker=ticker, asof=asof_dt.isoformat().replace("+00:00", "Z"), items=uniq)
-
+    return NewsBundle(ticker=ticker, asof=asof_dt.isoformat().replace("+00:00", "Z"), items=uniq), metas

@@ -12,9 +12,8 @@ This document records guidelines and the current inventory of prompts and model 
 
 ### Inventory (initial)
 - Writer: (deterministic, code‑driven; no active prompt) — future: style/format prompts if needed.
-- News: planned — extraction and summarization prompts; require citation coverage evals.
+- News: prompts/news/summarize_impacts.md — extraction and summarization into JSON impacts; evals with cassettes required.
 - Critic: planned — constraints and blocking rules; require rule‑based evals.
 - Router (LLM‑assisted): planned — optional; deterministic first via rule‑based router.
 
 See AGENTS.md for governance and PR requirements.
-
