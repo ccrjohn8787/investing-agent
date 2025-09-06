@@ -18,7 +18,6 @@ def test_consensus_evals():
 
 
 @pytest.mark.eval
-@pytest.mark.xfail(reason="comparables not implemented yet; eval-first contracts only", strict=False)
 def test_comparables_evals():
     base = Path("evals/comparables/cases")
     paths = glob.glob(str(base / "*.json"))
