@@ -29,34 +29,19 @@ def base_inputs(T: int = 6) -> InputsI:
     )
 
 
-def test_market_nudges_wacc_up_bounded():
+def test_market_is_noop_for_now():
     I = base_inputs()
-    # make terminal constraint tighter
-    I.drivers.stable_growth = 0.06
-    I.wacc = [0.05] * I.horizon()
     J = market_apply(I)
-    assert J.wacc[-1] >= I.wacc[-1]
-    assert J.wacc[-1] <= I.wacc[-1] + 0.0200001
-    assert min(J.wacc) >= 0.02 and max(J.wacc) <= 0.20
+    assert J.model_dump() == I.model_dump()
 
 
-def test_consensus_nudges_front_years():
+def test_consensus_is_noop_for_now():
     I = base_inputs()
     J = consensus_apply(I)
-    assert J.drivers.sales_growth[0] > I.drivers.sales_growth[0]
-    assert J.drivers.oper_margin[0] > I.drivers.oper_margin[0]
-    # bounded
-    assert J.drivers.sales_growth[0] <= 0.30
-    assert J.drivers.oper_margin[0] <= I.drivers.stable_margin + 0.02
+    assert J.model_dump() == I.model_dump()
 
 
-def test_comparables_moves_stable_margin_toward_median():
+def test_comparables_is_noop_for_now():
     I = base_inputs()
-    # Make median margin substantially higher
-    I.drivers.oper_margin = [0.20] * I.horizon()
-    I.drivers.stable_margin = 0.10
     J = comparables_apply(I)
-    assert J.drivers.stable_margin > I.drivers.stable_margin
-    # tail margins nudged toward stable
-    assert J.drivers.oper_margin[-1] != I.drivers.oper_margin[-1]
-
+    assert J.model_dump() == I.model_dump()

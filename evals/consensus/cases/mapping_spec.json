@@ -1,0 +1,12 @@
+{
+  "name": "consensus_mapping_contract",
+  "agent": "consensus",
+  "params": {
+    "note": "Contract stub: near-term mapping of consensus revenue/EBIT to drivers with bounds"
+  },
+  "checks": {
+    "contains": [],
+    "not_contains": []
+  }
+}
+

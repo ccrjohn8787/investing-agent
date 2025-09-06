@@ -11,26 +11,21 @@ must flow through schema-checked code.
 from investing_agent.schemas.inputs import InputsI
 
 
-def _clamp(x: float, lo: float, hi: float) -> float:
-    return max(lo, min(hi, x))
-
-
-def apply(I: InputsI) -> InputsI:
+def apply(I: InputsI, consensus_data: dict | None = None) -> InputsI:
     """
-    Bounded near-term nudges simulating consensus influence:
-    - Increase first two years' sales growth by +100 bps (cap to 30%).
-    - Increase first two years' operating margin by +50 bps (cap to stable_margin + 200 bps and ±60%).
-    Deterministic; later agents can supply real consensus, but this stays bounded and safe.
+    Consensus agent (contract stub — eval-first).
+
+    Purpose (per paper):
+    - Obtain analyst consensus/guidance and map to near-term spreadsheet drivers
+      (first N years), while clamping long-term drivers to stable targets.
+
+    Contract (target state):
+    - Inputs: `InputsI`, optional `consensus_data` schema with vendor fields.
+    - Output: new `InputsI` with near-term overrides; numeric mapping done in code; bounds enforced.
+    - Determinism: fully deterministic given consensus input.
+    - Provenance: cite consensus snapshots; record mapping and clamps.
+
+    Current behavior: no-op, returns a deep copy of `I`.
+    TODO(M5-consensus): implement connectors + mapping + evals; gate router use on availability.
     """
-    J = I.model_copy(deep=True)
-    T = J.horizon()
-    k = min(2, T)
-    g = list(J.drivers.sales_growth)
-    m = list(J.drivers.oper_margin)
-    m_cap = float(J.drivers.stable_margin) + 0.02
-    for t in range(k):
-        g[t] = _clamp(g[t] + 0.01, -0.99, 0.30)
-        m[t] = _clamp(m[t] + 0.005, -0.60, min(0.60, m_cap))
-    J.drivers.sales_growth = g
-    J.drivers.oper_margin = m
-    return J
+    return I.model_copy(deep=True)

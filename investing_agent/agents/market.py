@@ -10,29 +10,24 @@ assumptions (e.g., WACC path, beta) with market context. No direct LLM math.
 from investing_agent.schemas.inputs import InputsI
 
 
-def _clamp(x: float, lo: float, hi: float) -> float:
-    return max(lo, min(hi, x))
-
-
-def apply(I: InputsI) -> InputsI:
+def apply(I: InputsI, context: dict | None = None) -> InputsI:
     """
-    Bounded, deterministic market reconciliation:
-    - Ensure terminal feasibility by nudging WACC path upward (≤ 200 bps per call)
-      toward (stable_growth + 100 bps) if violated, clamped to [2%, 20%].
-    - Adjust smoothly across the path.
+    Market reconciliation agent (contract stub — eval-first).
+
+    Purpose (per paper):
+    - When asked to reconcile intrinsic value to market price, find the smallest
+      bounded changes to the value drivers that match the observed market price,
+      with a transparent rationale and provenance.
+
+    Contract (target state):
+    - Inputs: `InputsI`, optional `context` with
+      {"target_price", "weights", "bounds", "penalties"}.
+    - Output: new `InputsI` with proposed deltas; numeric changes derive from a
+      code solver (least-squares with bounds), never from an LLM.
+    - Determinism: fully deterministic given inputs and bounds.
+    - Provenance: record rationale and constraints in event log; cite snapshots.
+
+    Current behavior: no-op, returns a deep copy of `I`.
+    TODO(M5-market): implement bounded solver + evals; gate router use on data.
     """
-    J = I.model_copy(deep=True)
-    T = J.horizon()
-    w = list(J.wacc)
-    g_inf = float(J.drivers.stable_growth)
-    target_min = g_inf + 0.01
-    last = float(w[-1])
-    if last < target_min:
-        # Increase last by at most 200 bps per call
-        inc = min(target_min - last, 0.02)
-        for t in range(T):
-            # Progressive increase towards the end
-            factor = (t + 1) / T
-            w[t] = _clamp(w[t] + inc * factor, 0.02, 0.20)
-        J.wacc = w
-    return J
+    return I.model_copy(deep=True)

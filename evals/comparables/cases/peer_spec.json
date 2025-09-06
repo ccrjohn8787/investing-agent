@@ -1,0 +1,12 @@
+{
+  "name": "comparables_peer_contract",
+  "agent": "comparables",
+  "params": {
+    "note": "Contract stub: peer selection + distribution computation with bounded long-run tweaks"
+  },
+  "checks": {
+    "contains": [],
+    "not_contains": []
+  }
+}
+
