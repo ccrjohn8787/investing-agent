@@ -21,6 +21,7 @@ from investing_agent.agents.comparables import apply as comparables_apply
 from investing_agent.agents.market import apply as market_apply
 from investing_agent.agents.news import heuristic_summarize
 from investing_agent.schemas.news import NewsBundle
+from investing_agent.agents.research_llm import generate_insights as gen_insights
 
 
 @dataclass
@@ -89,7 +90,54 @@ def run_writer_case(case: EvalCase) -> EvalResult:
         insights = None
     md = render_report(I, V, llm_output=llm_out, insights=insights)
 
+    # Quality gates based on eval config (if present)
+    cfg = {}
+    try:
+        import yaml  # type: ignore
+        cfg = yaml.safe_load(Path("evals/config.yaml").read_text()) or {}
+    except Exception:
+        try:
+            cfg = json.loads(Path("evals/config.yaml").read_text())
+        except Exception:
+            cfg = {}
+    min_ref = float(((cfg.get("writer") or {}).get("min_ref_paras", 0.0)))
+
+    # Count narrative paragraphs with refs in LLM sections
+    def _section_blocks(md_str: str) -> dict:
+        blocks = {}
+        cur = None
+        buf: list[str] = []
+        for ln in md_str.splitlines():
+            if ln.startswith("## "):
+                if cur is not None:
+                    blocks[cur] = "\n".join(buf)
+                cur = ln[3:].strip()
+                buf = []
+            else:
+                if cur is not None:
+                    buf.append(ln)
+        if cur is not None:
+            blocks[cur] = "\n".join(buf)
+        return blocks
+
+    blocks = _section_blocks(md)
+    llm_titles = {"Business Model", "Thesis", "Drivers", "Risks", "Scenarios", "Market vs Value"}
+    paras = []
+    for title, body in blocks.items():
+        if title in llm_titles:
+            for para in [p.strip() for p in body.split("\n\n") if p.strip()]:
+                if para.startswith("|") or para.startswith("##") or para.startswith("- "):
+                    continue
+                paras.append(para)
+    with_refs = [p for p in paras if "[ref:" in p]
     failures: List[str] = []
+    if paras:
+        ratio = len(with_refs) / max(1, len(paras))
+        if ratio + 1e-9 < min_ref:
+            failures.append(f"insufficient ref coverage in narrative: {ratio:.2f} < {min_ref:.2f}")
+
+    # Existing substring checks from eval cases
+    failures = failures or []
     checks = case.checks or {}
     for s in checks.get("contains", []) or []:
         if s not in md:
@@ -271,6 +319,26 @@ def run_case(path: Path) -> EvalResult:
         return run_market_case(case)
     if case.agent == "news":
         return run_news_case(case)
+    if case.agent == "research_llm":
+        p = case.params
+        cassette = p.get("cassette")
+        texts = p.get("texts") or []
+        bundle = gen_insights(texts, cassette_path=cassette)
+        failures: List[str] = []
+        if len(bundle.cards) < int(case.checks.get("min_cards", 1)):
+            failures.append("insufficient cards")
+        # Validate quotes and snapshot_ids
+        for c in bundle.cards:
+            if not c.quotes:
+                failures.append("card without quotes")
+            for q in c.quotes:
+                if not q.snapshot_ids:
+                    failures.append("quote missing snapshot_ids")
+            # tags must be subset of allowed
+            for t in c.tags:
+                if t not in {"growth", "margin", "s2c", "wacc", "other"}:
+                    failures.append("invalid tag")
+        return EvalResult(name=case.name, passed=len(failures) == 0, failures=failures, details={"cards": len(bundle.cards)})
     if case.agent == "critic_llm":
         # Minimal harness: build InputsI/V, render report, run LLM critic cassette and assert min issues
         p = case.params

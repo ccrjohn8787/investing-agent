@@ -111,6 +111,8 @@ def check_report(report_md: str, I: InputsI, V: ValuationV, manifest: Optional[A
     issues.extend(ref_issues)
     # Arithmetic consistency checks with lenient tolerance (rounding in tables)
     issues.extend(_check_arithmetic_consistency(report_md, I, V, rel_tol=0.02))
+    # Narrative hygiene: no naked numbers in LLM narrative sections (e.g., Business Model, Thesis, Drivers, Risks, Scenarios, Market vs Value)
+    issues.extend(_check_naked_numbers_in_narrative(report_md))
     return issues
 
 
@@ -140,6 +142,58 @@ def _extract_terminal_pv(report_md: str) -> Optional[float]:
     if not m:
         return None
     return _num(m.group(1))
+
+
+def _section_blocks(report_md: str) -> dict:
+    lines = report_md.splitlines()
+    blocks = {}
+    current = None
+    buf: list[str] = []
+    for ln in lines:
+        if ln.startswith("## "):
+            if current is not None:
+                blocks[current] = "\n".join(buf).strip()
+            current = ln[3:].strip()
+            buf = []
+        else:
+            if current is not None:
+                buf.append(ln)
+    if current is not None:
+        blocks[current] = "\n".join(buf).strip()
+    return blocks
+
+
+def _check_naked_numbers_in_narrative(report_md: str) -> List[str]:
+    narrative_titles = {
+        "Business Model",
+        "Thesis",
+        "Drivers",
+        "Risks",
+        "Scenarios",
+        "Market vs Value",
+    }
+    blocks = _section_blocks(report_md)
+    import re
+    issues: List[str] = []
+    num_pat = re.compile(r"(?<!\w)(\d[\d,]*\.?\d*)(?!\w)")
+    for title, body in blocks.items():
+        if title not in narrative_titles:
+            continue
+        # Scan lines and flag those with numbers not part of ref tokens or table rows
+        for ln in body.splitlines():
+            if not ln.strip():
+                continue
+            if ln.strip().startswith("|"):
+                continue
+            if "[ref:" in ln:
+                # allowed numbers inside ref token only; strip token for scan
+                ln = re.sub(r"\[ref:.*?\]", "", ln)
+            # ignore bracketed URLs
+            ln = re.sub(r"\(https?://[^\)]+\)", "", ln)
+            if num_pat.search(ln):
+                issues.append(f"Naked number in narrative: {title}")
+                break
+    return issues
 
 
 def _sum_pv_fcff_from_table(report_md: str) -> Optional[float]:

@@ -1,0 +1,7 @@
+writer:
+  min_ref_paras: 0.7
+critic:
+  blockers_required_zero: true
+research:
+  min_cards: 2
+

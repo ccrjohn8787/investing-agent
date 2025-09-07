@@ -1,0 +1,8 @@
+{
+  "metadata": {"model": "gpt-4.1-mini", "params": {"temperature": 0, "top_p": 1, "seed": 2025}},
+  "sections": [
+    {"title": "Business Model", "paragraphs": ["Paragraph with ref [ref:table:Per-Year Detail]"], "refs": ["table:Per-Year Detail"]},
+    {"title": "Thesis", "paragraphs": ["This thesis paragraph includes a token [ref:computed:valuation.value_per_share]"], "refs": ["computed:valuation.value_per_share"]}
+  ]
+}
+

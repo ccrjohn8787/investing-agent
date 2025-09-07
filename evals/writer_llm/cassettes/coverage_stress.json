@@ -1,0 +1,26 @@
+{
+  "metadata": {"model": "gpt-4.1-mini", "params": {"temperature": 0, "top_p": 1, "seed": 2025}},
+  "sections": [
+    {"title": "Business Model", "paragraphs": [
+      "Model paragraph A [ref:table:Per-Year Detail]",
+      "Model paragraph B [ref:section:Terminal Value]"
+    ], "refs": ["table:Per-Year Detail", "section:Terminal Value"]},
+    {"title": "Thesis", "paragraphs": [
+      "Thesis paragraph A [ref:computed:valuation.value_per_share]",
+      "Thesis paragraph B [ref:section:Per-Year Detail]"
+    ], "refs": ["computed:valuation.value_per_share", "section:Per-Year Detail"]},
+    {"title": "Drivers", "paragraphs": [
+      "Drivers para [ref:table:Per-Year Detail]"
+    ], "refs": ["table:Per-Year Detail"]},
+    {"title": "Risks", "paragraphs": [
+      "Risks para [ref:snap:abcd1234]"
+    ], "refs": ["snap:abcd1234"]},
+    {"title": "Scenarios", "paragraphs": [
+      "Scenarios para [ref:section:Terminal Value]"
+    ], "refs": ["section:Terminal Value"]},
+    {"title": "Market vs Value", "paragraphs": [
+      "MvV para [ref:computed:valuation.value_per_share]"
+    ], "refs": ["computed:valuation.value_per_share"]}
+  ]
+}
+

@@ -1,0 +1,11 @@
+{
+  "name": "writer_narrative_coverage_simple",
+  "agent": "writer",
+  "params": {
+    "company": "EvalCo",
+    "ticker": "EVAL",
+    "writer_llm_cassette": "evals/writer_llm/cassettes/coverage_simple.json"
+  },
+  "checks": {}
+}
+

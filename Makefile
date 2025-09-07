@@ -38,3 +38,6 @@ supervisor:
 
 router_demo:
 	python scripts/router_demo.py
+
+ui:
+	python scripts/make_index.py && echo "Open out/index.html"
