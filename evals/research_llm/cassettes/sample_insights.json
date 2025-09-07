@@ -1,0 +1,25 @@
+{
+  "cards": [
+    {
+      "claim": "Management indicates stable margins next year.",
+      "tags": ["margin"],
+      "start_year_offset": 0,
+      "end_year_offset": 1,
+      "confidence": 0.7,
+      "quotes": [
+        {"text": "Margins expected to remain stable.", "snapshot_ids": ["abcd"], "sources": ["https://example" ]}
+      ]
+    },
+    {
+      "claim": "Reinvestment intensity tapers as capacity matures.",
+      "tags": ["s2c"],
+      "start_year_offset": 1,
+      "end_year_offset": 3,
+      "confidence": 0.6,
+      "quotes": [
+        {"text": "Capex intensity is expected to decline.", "snapshot_ids": ["abcd"]}
+      ]
+    }
+  ]
+}
+

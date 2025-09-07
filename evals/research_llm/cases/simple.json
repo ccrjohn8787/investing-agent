@@ -1,0 +1,9 @@
+{
+  "name": "research_llm_simple",
+  "agent": "research_llm",
+  "params": {
+    "cassette": "evals/research_llm/cassettes/sample_insights.json"
+  },
+  "checks": {"min_cards": 2}
+}
+

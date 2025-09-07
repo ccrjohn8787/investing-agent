@@ -174,6 +174,10 @@ def main():
     ap.add_argument("--writer", choices=["code", "llm", "hybrid"], default="code", help="Writer mode: code-only, cassette LLM, or hybrid (narrative added)")
     ap.add_argument("--writer-llm-cassette", help="Path to an LLM writer cassette JSON (deterministic narrative)")
     ap.add_argument("--insights", help="Optional path to insights JSON (InsightBundle)")
+    # Research LLM summarizer (cassette-driven)
+    ap.add_argument("--insights-llm-cassette", help="Path to insights LLM cassette (JSON or JSONL)")
+    ap.add_argument("--insights-llm-live", action="store_true", help="Enable live insights summarizer (records cassette); disabled in CI")
+    ap.add_argument("--insights-llm-cassette-out", help="Path to write insights cassette JSONL when recording")
     # Live LLM (opt-in; disabled in CI)
     ap.add_argument("--llm-live", action="store_true", help="Enable live LLM (records to cassette). Ignored in CI")
     ap.add_argument("--llm-provider", default="openai", help="LLM provider id (reserved)")
@@ -718,6 +722,32 @@ def main():
             manifest.add_artifact("insights.json", insights_bundle.model_dump())
         except Exception:
             insights_bundle = None
+    elif args.insights_llm_cassette or args.insights_llm_live:
+        try:
+            # Gather cached texts (filings) deterministically
+            texts: list[dict] = []
+            filings_dir = out_dir / "filings"
+            if filings_dir.exists():
+                for p in sorted(filings_dir.glob("*.txt")):
+                    sha = p.stem
+                    texts.append({"kind": "filing", "text": p.read_text(), "snapshot_sha": sha, "url": "", "date": None})
+            if args.insights_llm_cassette:
+                from investing_agent.agents.research_llm import generate_insights
+                bundle = generate_insights(texts, cassette_path=args.insights_llm_cassette)
+                insights_bundle = bundle
+                (out_dir / "insights.json").write_text(bundle.model_dump_json(indent=2))
+                manifest.add_artifact("insights.json", bundle.model_dump())
+                manifest.models["research"] = "gpt-4.1-mini@deterministic:cassette"
+            elif args.insights_llm_live:
+                from investing_agent.agents.research_llm import generate_insights
+                bundle = generate_insights(texts, cassette_path=None, live=True, cassette_out=(args.insights_llm_cassette_out or str(out_dir / "cassettes" / "insights.jsonl")))
+                insights_bundle = bundle
+                # Persist even if empty
+                (out_dir / "insights.json").write_text(bundle.model_dump_json(indent=2))
+                manifest.add_artifact("insights.json", bundle.model_dump())
+                manifest.models["research"] = "gpt-4.1-mini@deterministic:live"
+        except Exception:
+            pass
 
     t0 = _time.time()
     md = render_report(

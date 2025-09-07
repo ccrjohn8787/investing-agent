@@ -1,0 +1,7 @@
+{
+  "jobs": [
+    {"ticker": "BT1", "base_dir": "tests/fixtures/backtest/BT1", "asof": "2024-12-31"}
+  ],
+  "metrics": {"target": "last_close"}
+}
+
