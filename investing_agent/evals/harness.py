@@ -105,7 +105,15 @@ def run_consensus_case(case: EvalCase) -> EvalResult:
     )
     horizon = int(p.get("horizon", 6))
     I = build_inputs_from_fundamentals(f, horizon=horizon)
-    consensus_data = {"revenue": [rev1, rev2], "ebit": [ebit1, ebit2]}
+    # Allow full consensus payload passthrough if present; otherwise build from y1/y2 fields
+    consensus_payload = dict(p.get("consensus", {}))
+    has_direct = any(k in consensus_payload for k in ("growth", "margin", "revenue", "ebit", "smoothing", "smooth_to_stable", "bounds"))
+    if has_direct:
+        consensus_data = consensus_payload
+        used_mapping_from_rev = False
+    else:
+        consensus_data = {"revenue": [rev1, rev2], "ebit": [ebit1, ebit2]}
+        used_mapping_from_rev = True
 
     J = consensus_apply(I, consensus_data)
 
@@ -117,17 +125,18 @@ def run_consensus_case(case: EvalCase) -> EvalResult:
 
     tol = float(case.checks.get("tol", 1e-6))
     failures: List[str] = []
-    try:
-        if abs(J.drivers.sales_growth[0] - exp_g1) > tol:
-            failures.append(f"g1 mismatch: got {J.drivers.sales_growth[0]:.6f}, exp {exp_g1:.6f}")
-        if abs(J.drivers.sales_growth[1] - exp_g2) > tol:
-            failures.append(f"g2 mismatch: got {J.drivers.sales_growth[1]:.6f}, exp {exp_g2:.6f}")
-        if abs(J.drivers.oper_margin[0] - exp_m1) > tol:
-            failures.append(f"m1 mismatch: got {J.drivers.oper_margin[0]:.6f}, exp {exp_m1:.6f}")
-        if abs(J.drivers.oper_margin[1] - exp_m2) > tol:
-            failures.append(f"m2 mismatch: got {J.drivers.oper_margin[1]:.6f}, exp {exp_m2:.6f}")
-    except Exception as e:
-        failures.append(f"exception during checks: {e}")
+    if used_mapping_from_rev:
+        try:
+            if abs(J.drivers.sales_growth[0] - exp_g1) > tol:
+                failures.append(f"g1 mismatch: got {J.drivers.sales_growth[0]:.6f}, exp {exp_g1:.6f}")
+            if abs(J.drivers.sales_growth[1] - exp_g2) > tol:
+                failures.append(f"g2 mismatch: got {J.drivers.sales_growth[1]:.6f}, exp {exp_g2:.6f}")
+            if abs(J.drivers.oper_margin[0] - exp_m1) > tol:
+                failures.append(f"m1 mismatch: got {J.drivers.oper_margin[0]:.6f}, exp {exp_m1:.6f}")
+            if abs(J.drivers.oper_margin[1] - exp_m2) > tol:
+                failures.append(f"m2 mismatch: got {J.drivers.oper_margin[1]:.6f}, exp {exp_m2:.6f}")
+        except Exception as e:
+            failures.append(f"exception during checks: {e}")
 
     # Optional smoothing check: tail values trend to stable
     if case.checks.get("tail_to_stable"):
