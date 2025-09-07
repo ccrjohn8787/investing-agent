@@ -1,0 +1,18 @@
+{
+  "company": "Microsoft Corp.",
+  "ticker": "MSFT",
+  "currency": "USD",
+  "shares_out": 7500.0,
+  "tax_rate": 0.25,
+  "revenue_t0": 80000.0,
+  "net_debt": 0.0,
+  "cash_nonop": 0.0,
+  "drivers": {"sales_growth": [0.10,0.09,0.08,0.07,0.06,0.05], "oper_margin": [0.37,0.36,0.35,0.34,0.33,0.32], "stable_growth": 0.02, "stable_margin": 0.32},
+  "sales_to_capital": [2.2,2.2,2.2,2.2,2.2,2.2],
+  "wacc": [0.07,0.07,0.07,0.07,0.07,0.07],
+  "macro": {"risk_free_curve": [0.04,0.04,0.04,0.04,0.04,0.04], "erp": 0.05, "country_risk": 0.0},
+  "discounting": {"mode": "end"},
+  "leases": {"include": true},
+  "provenance": {"vendor": "canary"}
+}
+

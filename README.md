@@ -60,9 +60,17 @@ Reports
 - Scenario presets: `--scenario baseline|cautious|aggressive` (loads from `configs/scenarios/`).
 - Apply consensus (near-term revenue/EBIT): `--consensus path/to/consensus.json`.
 - LLM writer (cassette): `--writer llm --writer-llm-cassette evals/writer_llm/cassettes/sample_output.json`
- - Insights (cassette): `--insights evals/research/cassettes/insights_sample.json`
- - Optional LLM critic (cassette via supervisor): `--critic-llm-cassette evals/critic_llm/cassettes/sample_critique.json` with scenario `router.enable_llm_critic: true`.
+  - Insights (cassette): `--insights evals/research/cassettes/insights_sample.json`
+  - Optional LLM critic (cassette via supervisor): `--critic-llm-cassette evals/critic_llm/cassettes/sample_critique.json` with scenario `router.enable_llm_critic: true`.
   - Live LLM (opt-in; no CI): `--llm-live --llm-model gpt-4.1-mini --llm-cassette-out out/<TICKER>/cassettes/writer.jsonl` (records for replay).
+
+Insights via Research Summarizer (cassette)
+- Generate from cached filings (offline): `--insights-llm-cassette evals/research_llm/cassettes/sample_insights.json`
+- Live (non-CI): `--insights-llm-live --insights-llm-cassette-out out/<TICKER>/cassettes/insights.jsonl`
+
+Backtesting Quick Start
+- Plan JSON/YAML with jobs: `python scripts/backtest.py tests/fixtures/backtest/plan.json`
+- Outputs: `out/_backtests/<RUN_ID>/per_ticker.csv` and `summary.csv` (MAD, MAPE, median_abs_err, count).
 
 Consensus Smoothing (via scenario or direct consensus_data)
 - consensus.smoothing: `{ mode: slope|half_life, slope_bps_per_year?: number, half_life_years?: number }`

@@ -2,6 +2,8 @@
   "ticker": "BYD",
   "artifacts": {
     "valuation": "cfdc2dc019a366d6e5ccdbd7959c05b381bb78b4efd2129f418553a36d721eb5",
-    "report.md": "92724539594b375f99f9f6cf3b5336b3a62b63712e0a5cc6e023fd3d81a0f4fa"
+    "report.md": "92724539594b375f99f9f6cf3b5336b3a62b63712e0a5cc6e023fd3d81a0f4fa",
+    "insights.json": "546b1745dfc6d2cd683c0de7b04a61686830cc20e18b955b073141cbede26fb5",
+    "writer_llm.json": "f159f94e076becc94d16ccf4a50bb0933cfc1e9b963cf99874a19f89d6fd41c7"
   }
 }

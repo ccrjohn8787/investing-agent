@@ -1,0 +1,25 @@
+{
+  "cards": [
+    {
+      "claim": "Battery segment scale supports margin resilience into Y+1.",
+      "tags": ["margin", "segment"],
+      "start_year_offset": 0,
+      "end_year_offset": 1,
+      "confidence": 0.7,
+      "quotes": [
+        { "text": "Battery gross margins improved in the last quarter.", "snapshot_ids": ["bydsha1234"], "sources": ["https://example.local/byd/10k"] }
+      ]
+    },
+    {
+      "claim": "Capex intensity declines as manufacturing footprint matures.",
+      "tags": ["s2c", "capex"],
+      "start_year_offset": 1,
+      "end_year_offset": 3,
+      "confidence": 0.6,
+      "quotes": [
+        { "text": "Management expects lower reinvestment-to-growth over the medium term.", "snapshot_ids": ["bydsha1234"] }
+      ]
+    }
+  ]
+}
+
