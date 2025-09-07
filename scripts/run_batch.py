@@ -24,7 +24,8 @@ def load_yaml_or_json(path: Path) -> Dict[str, Any]:
 
 
 def build_cmd(job: Dict[str, Any], default_scenario: str | None = None) -> List[str]:
-    cmd = ["python", "scripts/report.py"]
+    import sys
+    cmd = [sys.executable, "scripts/report.py"]
     ticker = job.get("ticker")
     if not ticker:
         raise ValueError("job missing ticker")
@@ -40,6 +41,16 @@ def build_cmd(job: Dict[str, Any], default_scenario: str | None = None) -> List[
     scen = job.get("scenario") or default_scenario
     if scen:
         cmd.extend(["--scenario", str(scen)])
+    # Optional writer + insights flags
+    writer = job.get("writer")
+    if writer:
+        cmd.extend(["--writer", str(writer)])
+    wllm = job.get("writer_llm_cassette")
+    if wllm:
+        cmd.extend(["--writer-llm-cassette", str(wllm)])
+    insights = job.get("insights")
+    if insights:
+        cmd.extend(["--insights", str(insights)])
     return cmd
 
 
@@ -57,8 +68,22 @@ def main():
     summary = {"count": len(cmds), "cmds": [" ".join(shlex.quote(c) for c in cmd) for cmd in cmds]}
     print(json.dumps(summary, indent=2))
     if args.run:
-        for cmd in cmds:
-            subprocess.run(cmd, check=False)
+        for i, job in enumerate(jobs):
+            # Seed inputs.json if provided
+            inputs_path = job.get("inputs_path")
+            if inputs_path and job.get("ticker"):
+                t = str(job.get("ticker")).upper()
+                out_dir = Path("out") / t
+                out_dir.mkdir(parents=True, exist_ok=True)
+                try:
+                    Path(inputs_path).replace(out_dir / "inputs.json") if False else None
+                except Exception:
+                    # Fallback to copy
+                    try:
+                        (out_dir / "inputs.json").write_text(Path(inputs_path).read_text())
+                    except Exception:
+                        pass
+            subprocess.run(cmds[i], check=False)
 
 
 if __name__ == "__main__":
