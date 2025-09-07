@@ -33,7 +33,17 @@ This roadmap captures the end goal, success criteria, milestones, and current st
 - M9 Golden fixtures & CI gates: canary tickers, acceptance checks, artifact hash pinning — DONE (infrastructure: writer script, acceptance test, Make targets; add/maintain goldens via team policy)
 - M10 CLI polish: scenario YAML, multi‑ticker batch, richer flags; CSV/JSON exports — DONE (scenario + batch + flags)
 - M11 Caching & performance: local caches with revalidation; parallel fetch where safe — PENDING
-- M12 Writer/Critic (LLM) gating: deterministic prompts; critic blocks unsafe changes — PENDING
+- M11.5 Research v1 (evidence and insights): NEW
+  - Deterministic retrieval of filings/news text (10-K/10-Q MD&A, 8-Ks, IR RSS); cache under `out/<TICKER>/filings/` with hashes.
+  - Contract: `schemas/research.py::InsightCard`, `InsightBundle` — claims with quotes, snapshot IDs, driver tags, horizon, confidence, rationale.
+  - LLM usage boundary: InsightCards generation is performed under the Writer agent (LLM) using these retrieved texts; Research remains retrieval + structuring.
+  - Evals: coverage (min cards), citation density (≥1 snapshot per card), driver tags in allowed set, presence of quotes; cassette-based outputs.
+  - Artifacts: `insights.json` added to manifest artifacts; models recorded when LLM is involved.
+- M12 Writer/Critic (LLM) gating: UPDATED
+  - Writer (LLM) hybrid path: generate narrative JSON (`schemas/writer_llm.py::WriterLLMOutput`) with sections [Business Model, Thesis, What Changed, Drivers, Risks, Scenarios, Market vs Value], using tokens like `[ref:computed:…]`, `[table:…]`, `[section:…]`, `[snap:<sha>]`.
+  - Post-processor merges LLM sections with existing tables/charts; no LLM-introduced numbers. Rule-based Critic validates tokens, arithmetic, sections; optional LLM Critic flags style/unsupported claims.
+  - Evals: structure checks (required sections present), token-only numerics (min paragraphs with `[ref:]`), citations present; cassette-based.
+  - CLI: `--writer llm|code|hybrid`; manifest `models` updated with deterministic params.
 - M13 Orchestrator FSM: structured flow with router loop + stop conditions — PENDING
 - M14 Web UI (optional): single‑file HTML viewer + lightweight UI — OPTIONAL
 
@@ -42,13 +52,15 @@ This roadmap captures the end goal, success criteria, milestones, and current st
 
 ### Next Actions (near‑term)
 1) Consensus (M5 finalize): add optional smoothing parameters (scenario‑driven slope/half‑life), evals for bounds and tail behavior.
-2) Router (M4 polish): add supervisor loop integration test and convergence thresholds as config; ensure sensitivity run occurs once near convergence.
-3) Golden canaries (M9): add 2–3 ticker fixtures with goldens; wire gating in CI; record manifest deltas and critic pass.
-4) Caching & perf (M11): generalize caches outside `out/<TICKER>/` with revalidation and TTL; add controlled parallel fetch for EDGAR/UST/prices where safe.
+2) LLM Writer v1 (M12): implement WriterLLM contracts, post‑processor, and add evals + cassettes; keep numeric integrity via tokens and Critic.
+3) Research v1 (M11.5): build retrieval + structuring; add sample InsightCards cassette and evals; wire artifacts into manifest.
+4) Router (M4 polish): add supervisor loop integration test and convergence thresholds as config; ensure sensitivity run occurs once near convergence.
+5) Golden canaries (M9): add 2–3 ticker fixtures with goldens; wire gating in CI; record manifest deltas and critic pass; extend to include narrative JSON when LLM Writer is enabled.
+6) Caching & perf (M11): generalize caches outside `out/<TICKER>/` with revalidation and TTL; add controlled parallel fetch for EDGAR/UST/prices where safe; reuse cache in Research.
 
 ### Risks & Mitigations
 - Upstream instability (SEC/UST/price endpoints): cache artifacts with hashes; degrade gracefully; annotate report.
-- Scope creep on LLM usage: enforce AGENTS.md boundaries; keep numeric work in code; require deterministic settings and code validation paths.
+- Scope creep on LLM usage: enforce AGENTS.md boundaries; keep numeric work in code; require deterministic settings and code validation paths. Research LLM work happens under Writer agent; use cassettes and strict schemas.
 - Non‑deterministic ordering: enforce sorted inputs, stable tie‑breakers, idempotent writes.
 
 ### Keeping This Updated

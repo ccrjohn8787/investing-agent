@@ -19,6 +19,8 @@ from investing_agent.agents.comparables import apply as comparables_apply
 from investing_agent.agents.market import apply as market_apply
 from investing_agent.agents.news import heuristic_summarize
 from investing_agent.schemas.news import NewsBundle
+from investing_agent.schemas.writer_llm import WriterLLMOutput
+from investing_agent.schemas.research import InsightBundle
 
 
 @dataclass
@@ -242,6 +244,10 @@ def run_case(path: Path) -> EvalResult:
         return run_market_case(case)
     if case.agent == "news":
         return run_news_case(case)
+    if case.agent == "writer_llm":
+        return run_writer_llm_case(case)
+    if case.agent == "writer_research":
+        return run_research_case(case)
     raise NotImplementedError(f"Unsupported agent for eval: {case.agent}")
 
 
@@ -283,3 +289,75 @@ def run_news_case(case: EvalCase) -> EvalResult:
         if not imp.fact_ids:
             failures.append("impact missing fact_ids")
     return EvalResult(name=case.name, passed=len(failures)==0, failures=failures, details={"impacts": len(summary.impacts)})
+
+
+def run_writer_llm_case(case: EvalCase) -> EvalResult:
+    """
+    Evals for LLM Writer narrative (cassette-based, deterministic).
+    - Load a cassette JSON representing WriterLLMOutput
+    - Check required sections present
+    - Ensure some [ref:...] tokens appear and citations present
+    - Optionally verify allowed section titles and basic style constraints
+    """
+    p = case.params
+    cassette = p.get("cassette")
+    if not cassette:
+        return EvalResult(case.name, False, ["missing cassette path"], {})
+    data = json.loads(Path(cassette).read_text())
+    try:
+        out = WriterLLMOutput.model_validate(data)
+    except Exception as e:
+        return EvalResult(case.name, False, [f"invalid WriterLLMOutput: {e}"], {})
+
+    failures: List[str] = []
+    # Required section titles (if provided)
+    required = list(case.checks.get("required_sections", []))
+    titles = [s.title.strip().lower() for s in out.sections]
+    for req in required:
+        if req.strip().lower() not in titles:
+            failures.append(f"missing section: {req}")
+    # Token presence
+    token_required = int(case.checks.get("min_token_paragraphs", 1))
+    token_paras = 0
+    for s in out.sections:
+        for para in s.paragraphs:
+            if "[ref:" in para:
+                token_paras += 1
+    if token_paras < token_required:
+        failures.append("insufficient paragraphs with [ref:] tokens")
+    # Citations presence (if required)
+    if case.checks.get("require_citations", True) and len(out.citations) == 0:
+        failures.append("missing citations")
+    return EvalResult(case.name, len(failures) == 0, failures, {"sections": len(out.sections)})
+
+
+def run_research_case(case: EvalCase) -> EvalResult:
+    """
+    Evals for research insight cards (cassette-based).
+    - Load a cassette JSON representing InsightBundle
+    - Check min cards, per-card citation coverage, driver tags from allowed set
+    """
+    p = case.params
+    cassette = p.get("cassette")
+    if not cassette:
+        return EvalResult(case.name, False, ["missing cassette path"], {})
+    data = json.loads(Path(cassette).read_text())
+    try:
+        bundle = InsightBundle.model_validate(data)
+    except Exception as e:
+        return EvalResult(case.name, False, [f"invalid InsightBundle: {e}"], {})
+
+    failures: List[str] = []
+    min_cards = int(case.checks.get("min_cards", 1))
+    if len(bundle.cards) < min_cards:
+        failures.append(f"too few cards: {len(bundle.cards)} < {min_cards}")
+    allowed = set(case.checks.get("allowed_drivers", ["growth", "margin", "s2c", "wacc", "other"]))
+    min_snap = int(case.checks.get("min_snapshot_refs_per_card", 1))
+    for i, c in enumerate(bundle.cards):
+        if not set(c.drivers).issubset(allowed):
+            failures.append(f"card {i} has disallowed drivers: {c.drivers}")
+        if len(c.snapshot_ids) < min_snap:
+            failures.append(f"card {i} missing snapshot refs")
+        if not c.quotes:
+            failures.append(f"card {i} missing quotes")
+    return EvalResult(case.name, len(failures) == 0, failures, {"cards": len(bundle.cards)})

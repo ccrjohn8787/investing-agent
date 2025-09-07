@@ -1,0 +1,36 @@
+{
+  "ticker": "EVAL",
+  "asof": "2025-09-03T00:00:00Z",
+  "cards": [
+    {
+      "id": "c1",
+      "claim": "Management raised long-term output guidance, supporting near-term growth [ref:section:Per-Year Detail]",
+      "quotes": [
+        {"text": "We plan to expand capacity by 20% over the next two years.", "snapshot_sha": "abc123", "source_url": "https://example.com/8k"}
+      ],
+      "snapshot_ids": ["abc123"],
+      "tags": ["guidance", "capacity"],
+      "drivers": ["growth", "s2c"],
+      "start_year_offset": 0,
+      "end_year_offset": 2,
+      "confidence": 0.7,
+      "rationale": "Capacity expansion can lift growth and alter capital intensity."
+    },
+    {
+      "id": "c2",
+      "claim": "Tariffs could pressure near-term margins [ref:section:Terminal Value]",
+      "quotes": [
+        {"text": "Proposed import tariffs on key components.", "snapshot_sha": "def456", "source_url": "https://example.com/news"}
+      ],
+      "snapshot_ids": ["def456"],
+      "tags": ["regulation"],
+      "drivers": ["margin"],
+      "start_year_offset": 0,
+      "end_year_offset": 1,
+      "confidence": 0.6,
+      "rationale": "Tariffs typically compress gross margin until pricing adjusts."
+    }
+  ],
+  "models": {"writer": "gpt-4.1-mini", "params": {"temperature": 0, "top_p": 1, "seed": 2025}}
+}
+

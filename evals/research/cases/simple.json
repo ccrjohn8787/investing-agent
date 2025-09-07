@@ -1,0 +1,13 @@
+{
+  "name": "writer_research_insight_cards_min",
+  "agent": "writer_research",
+  "params": {
+    "cassette": "evals/research/cassettes/insights_sample.json"
+  },
+  "checks": {
+    "min_cards": 2,
+    "allowed_drivers": ["growth", "margin", "s2c", "wacc", "other"],
+    "min_snapshot_refs_per_card": 1
+  }
+}
+

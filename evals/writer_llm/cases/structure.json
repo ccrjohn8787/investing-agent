@@ -1,0 +1,13 @@
+{
+  "name": "writer_llm_basic_structure",
+  "agent": "writer_llm",
+  "params": {
+    "cassette": "evals/writer_llm/cassettes/sample_output.json"
+  },
+  "checks": {
+    "required_sections": ["Business Model", "Thesis", "Risks"],
+    "min_token_paragraphs": 2,
+    "require_citations": true
+  }
+}
+

@@ -1,0 +1,31 @@
+{
+  "sections": [
+    {
+      "title": "Business Model",
+      "paragraphs": [
+        "The company generates revenue through hardware and after-sales services [ref:section:Per-Year Detail].",
+        "Unit economics are driven by margin expansion as scale increases [ref:computed:valuation.pv_explicit]."
+      ],
+      "refs": ["snap:abcdef0123456789"]
+    },
+    {
+      "title": "Thesis",
+      "paragraphs": [
+        "Core thesis: durable growth as reinvestment supports capacity [ref:table:Per-Year Detail]."
+      ],
+      "refs": ["snap:abcdef0123456789"]
+    },
+    {
+      "title": "Risks",
+      "paragraphs": [
+        "Key risks include regulatory actions that could compress margins [ref:section:Terminal Value; snap:abcdef0123456789]."
+      ],
+      "refs": ["snap:abcdef0123456789"]
+    }
+  ],
+  "citations": [
+    "EDGAR companyfacts: https://data.sec.gov/api/xbrl/companyfacts/CIK000000.json (sha: abcdef0123456789)"
+  ],
+  "models": {"writer": "gpt-4.1-mini", "params": {"temperature": 0, "top_p": 1, "seed": 2025}}
+}
+
