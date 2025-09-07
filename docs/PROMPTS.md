@@ -17,3 +17,9 @@ This document records guidelines and the current inventory of prompts and model 
 - Router (LLM‑assisted): planned — optional; deterministic first via rule‑based router.
 
 See AGENTS.md for governance and PR requirements.
+## Writer LLM Cassettes
+
+- Deterministic narrative is supplied via a JSON cassette (`schemas/writer_llm.WriterLLMOutput`).
+- Models must be configured deterministically: temperature=0, top_p=1, seed=2025.
+- CI uses cassettes only; no live LLM calls permitted.
+- Use `--writer llm|hybrid --writer-llm-cassette path/to/cassette.json` to merge narrative sections between "## Summary" and "## Per-Year Detail". Numeric values remain sourced from code; Critic validates references.

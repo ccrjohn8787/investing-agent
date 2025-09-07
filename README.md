@@ -59,6 +59,7 @@ Reports
 - Export HTML (single‑file) alongside Markdown: add `--html`.
 - Scenario presets: `--scenario baseline|cautious|aggressive` (loads from `configs/scenarios/`).
 - Apply consensus (near-term revenue/EBIT): `--consensus path/to/consensus.json`.
+- LLM writer (cassette): `--writer llm --writer-llm-cassette evals/writer_llm/cassettes/sample_output.json`
 - Apply comparables (peer list): `--peers path/to/peers.json` (cap via scenario `comparables.cap_bps` or `--cap-bps`).
 - Market solver target: `--market-target last_close|none` when scenario enables market.
 - Include News: `--news` to fetch recent RSS and propose impacts.

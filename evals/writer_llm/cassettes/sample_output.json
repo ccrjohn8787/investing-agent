@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "model": "gpt-4.1-mini",
+    "params": { "temperature": 0, "top_p": 1, "seed": 2025 }
+  },
+  "sections": [
+    {
+      "title": "Business Model",
+      "paragraphs": [
+        "The company generates revenue through a mix of product and service offerings across key segments.",
+        "Operational efficiency and capital intensity are reflected in the detailed tables below."
+      ],
+      "refs": ["table:Per-Year Detail"]
+    },
+    {
+      "title": "Thesis",
+      "paragraphs": [
+        "Our base case reflects durable growth and margins converging to stable levels consistent with long-run economics.",
+        "Valuation anchors on discounted FCFF and a conservative terminal construct."
+      ],
+      "refs": ["computed:valuation.value_per_share", "section:Terminal Value"]
+    },
+    {
+      "title": "Risks",
+      "paragraphs": [
+        "Key risks include execution against roadmap, pricing pressure, and macro sensitivity (rates, demand)."
+      ],
+      "refs": []
+    }
+  ]
+}
+

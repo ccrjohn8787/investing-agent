@@ -171,6 +171,9 @@ def main():
     ap.add_argument("--market-target", choices=["none", "last_close"], default="last_close")
     ap.add_argument("--cap-bps", type=float, default=100.0, help="Comparables cap in bps if not set by scenario")
     ap.add_argument("--html", action="store_true", help="Also write HTML report next to Markdown")
+    ap.add_argument("--writer", choices=["code", "llm", "hybrid"], default="code", help="Writer mode: code-only, cassette LLM, or hybrid (narrative added)")
+    ap.add_argument("--writer-llm-cassette", help="Path to an LLM writer cassette JSON (deterministic narrative)")
+    ap.add_argument("--insights", help="Optional path to insights JSON (reserved for future use)")
     ap.add_argument("--news", action="store_true", help="Include News agent (fetch recent RSS and propose impacts)")
     ap.add_argument("--news-window", type=int, default=14, help="News recency window in days")
     ap.add_argument("--news-sources", help="Comma-separated RSS/Atom URLs for news sources (override defaults)")
@@ -639,8 +642,45 @@ def main():
             manifest.add_artifact("news.json", news_bundle.model_dump())
             manifest.add_artifact("news_summary.json", news_summary.model_dump())
 
+    # LLM writer cassette (optional)
+    writer_llm_out = None
+    if args.writer in ("llm", "hybrid") and args.writer_llm_cassette:
+        try:
+            from investing_agent.schemas.writer_llm import WriterLLMOutput
+            text = Path(args.writer_llm_cassette).read_text()
+            data = json.loads(text)
+            writer_llm_out = WriterLLMOutput.model_validate(data)
+            # Record model in manifest if cassette metadata provided
+            model_meta = None
+            try:
+                model_meta = writer_llm_out.metadata or {}
+            except Exception:
+                model_meta = None
+            if model_meta:
+                model_id = model_meta.get("model") or model_meta.get("model_id")
+                params = model_meta.get("params")
+                if model_id and params:
+                    manifest.models["writer"] = f"{model_id}@cassette"
+                elif model_id:
+                    manifest.models["writer"] = str(model_id)
+                else:
+                    manifest.models["writer"] = "writer-llm@cassette"
+        except Exception:
+            writer_llm_out = None
+
     t0 = _time.time()
-    md = render_report(I, V, sensitivity_png=heat_png, driver_paths_png=drv_png, citations=citations, fundamentals=(f_for_report if 'f_for_report' in locals() else None), pv_bridge_png=bridge_png, price_vs_value_png=price_png, news=news_summary)
+    md = render_report(
+        I,
+        V,
+        sensitivity_png=heat_png,
+        driver_paths_png=drv_png,
+        citations=citations,
+        fundamentals=(f_for_report if 'f_for_report' in locals() else None),
+        pv_bridge_png=bridge_png,
+        price_vs_value_png=price_png,
+        news=news_summary,
+        llm_output=writer_llm_out,
+    )
     # Scenario section (if provided)
     if args.scenario:
         md += "\n\n## Scenario\n"
