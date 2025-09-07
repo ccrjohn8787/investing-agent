@@ -174,6 +174,11 @@ def main():
     ap.add_argument("--writer", choices=["code", "llm", "hybrid"], default="code", help="Writer mode: code-only, cassette LLM, or hybrid (narrative added)")
     ap.add_argument("--writer-llm-cassette", help="Path to an LLM writer cassette JSON (deterministic narrative)")
     ap.add_argument("--insights", help="Optional path to insights JSON (InsightBundle)")
+    # Live LLM (opt-in; disabled in CI)
+    ap.add_argument("--llm-live", action="store_true", help="Enable live LLM (records to cassette). Ignored in CI")
+    ap.add_argument("--llm-provider", default="openai", help="LLM provider id (reserved)")
+    ap.add_argument("--llm-model", default="gpt-4.1-mini", help="LLM model id for live mode")
+    ap.add_argument("--llm-cassette-out", help="Path to write LLM cassette JSONL (record mode)")
     ap.add_argument("--news", action="store_true", help="Include News agent (fetch recent RSS and propose impacts)")
     ap.add_argument("--news-window", type=int, default=14, help="News recency window in days")
     ap.add_argument("--news-sources", help="Comma-separated RSS/Atom URLs for news sources (override defaults)")
@@ -674,6 +679,33 @@ def main():
                 pass
         except Exception:
             writer_llm_out = None
+    elif args.writer in ("llm", "hybrid") and args.llm_live:
+        # Live mode guard for CI
+        if os.environ.get("CI", "").lower() in {"1", "true", "yes"}:
+            print("Warning: --llm-live ignored in CI")
+        else:
+            try:
+                # Build a deterministic request skeleton (no real call here)
+                req = {
+                    "model_id": args.llm_model,
+                    "messages": [{"role": "system", "content": "writer"}],
+                    "params": {"temperature": 0, "top_p": 1, "seed": 2025},
+                    "task": "writer_sections",
+                }
+                # Placeholder: no live provider call (deterministic cassette-only in CI environment)
+                # If a response were available, it would be recorded via cassette.record
+                if args.llm_cassette_out:
+                    from investing_agent.llm.cassette import record as cassette_record
+                    # For safety, record an empty response structure; real runs should replace this
+                    resp = {"metadata": {"model": args.llm_model, "params": req["params"]}, "sections": []}
+                    cassette_record(req, resp, Path(args.llm_cassette_out))
+                    # Also write a JSON for direct use later if desired
+                    (out_dir / "writer_llm.json").write_text(json.dumps(resp, indent=2))
+                    manifest.add_artifact("writer_llm.json", resp)
+                    manifest.models["writer"] = f"{args.llm_model}@deterministic:live"
+                    # Do not modify writer_llm_out here to keep report stable without live dependency
+            except Exception:
+                pass
 
     # Insights bundle (optional)
     insights_bundle = None

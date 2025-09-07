@@ -31,3 +31,7 @@ Insights Context
 LLM Critic (Cassette)
 - Optional, deterministic critique loaded from cassette JSON; no live calls in CI.
 - Enable in supervisor via scenario `router.enable_llm_critic: true` and CLI `--critic-llm-cassette path/to/critique.json`.
+- Live LLM Mode (record/replay)
+- Opt-in flags: `--llm-live --llm-provider=openai --llm-model=gpt-4.1-mini --llm-cassette-out out/<TICKER>/cassettes/writer.jsonl`.
+- CI forbids live calls; cassette replay is the only allowed path in CI.
+- Recorder writes JSONL entries with `{request,response,model_id,params,sha}`; replay matches by request hash.

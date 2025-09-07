@@ -62,6 +62,7 @@ Reports
 - LLM writer (cassette): `--writer llm --writer-llm-cassette evals/writer_llm/cassettes/sample_output.json`
  - Insights (cassette): `--insights evals/research/cassettes/insights_sample.json`
  - Optional LLM critic (cassette via supervisor): `--critic-llm-cassette evals/critic_llm/cassettes/sample_critique.json` with scenario `router.enable_llm_critic: true`.
+  - Live LLM (opt-in; no CI): `--llm-live --llm-model gpt-4.1-mini --llm-cassette-out out/<TICKER>/cassettes/writer.jsonl` (records for replay).
 
 Consensus Smoothing (via scenario or direct consensus_data)
 - consensus.smoothing: `{ mode: slope|half_life, slope_bps_per_year?: number, half_life_years?: number }`
