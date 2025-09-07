@@ -31,6 +31,11 @@ def main() -> int:
         "valuation": sha256_bytes(V.model_dump_json().encode("utf-8")),
         "report.md": sha256_bytes(md.encode("utf-8")),
     }
+    # Optional additional artifacts if present in canary folder
+    for name in ["series.csv", "fundamentals.csv", "insights.json", "writer_llm.json"]:
+        p = base / name
+        if p.exists():
+            artifacts[name] = sha256_bytes(p.read_bytes())
     out = {"ticker": I.ticker, "artifacts": artifacts}
     (base / "golden.json").write_text(json.dumps(out, indent=2))
     print(f"Wrote golden.json to {base}")
@@ -39,4 +44,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

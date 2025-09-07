@@ -36,9 +36,17 @@ def test_canary_golden_hashes():
         assert issues == [], f"Critic issues for {base}: {issues}"
         golden = load_json(gpath)
         expected = golden.get("artifacts", {})
+        # Compute mandatory artifacts
         actual = {
             "valuation": sha256_bytes(V.model_dump_json().encode("utf-8")),
             "report.md": sha256_bytes(md.encode("utf-8")),
         }
-        assert actual == expected, f"Golden mismatch for {base}: {actual} vs {expected}"
-
+        # Optional artifacts: compare only if present in expected and file exists in canary folder
+        optional_files = ["series.csv", "fundamentals.csv", "insights.json", "writer_llm.json"]
+        for name in optional_files:
+            p = base / name
+            if p.exists():
+                actual[name] = sha256_bytes(p.read_bytes())
+        # Compare on expected keys only (allow superset in actual)
+        subset = {k: actual[k] for k in expected.keys() if k in actual}
+        assert subset == expected, f"Golden mismatch for {base}: {subset} vs {expected}"

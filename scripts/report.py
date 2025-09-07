@@ -666,6 +666,12 @@ def main():
                     manifest.models["writer"] = str(model_id)
                 else:
                     manifest.models["writer"] = "writer-llm@cassette"
+            # Persist writer LLM output for canaries
+            try:
+                (out_dir / "writer_llm.json").write_text(json.dumps(writer_llm_out.model_dump(), indent=2))
+                manifest.add_artifact("writer_llm.json", writer_llm_out.model_dump())
+            except Exception:
+                pass
         except Exception:
             writer_llm_out = None
 
