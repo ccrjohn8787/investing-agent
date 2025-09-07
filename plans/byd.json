@@ -1,0 +1,1 @@
+{"jobs": [{"ticker": "BYD", "scenario": "baseline", "html": true, "inputs_path": "canaries/BYD/inputs.json", "writer": "llm", "writer_llm_cassette": "evals/writer_llm/cassettes/byd_writer.json", "insights": "evals/research/cassettes/byd_insights.json"}]}

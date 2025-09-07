@@ -1,0 +1,6 @@
+{
+  "name": "critic_multi_refs_invalid_combo",
+  "agent": "critic_rule",
+  "params": { "violation": "multi_refs_invalid" },
+  "checks": {}
+}

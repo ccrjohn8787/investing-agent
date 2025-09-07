@@ -115,20 +115,25 @@ def _scale_for_unit(unit: str) -> float:
 
 
 def _to_annual(series: Iterable[dict], scale: float = 1.0) -> Dict[int, float]:
+    """Return a map of {year: value} using full-year filings only.
+
+    We accept only items with fp in {FY, FYR} to avoid mixing quarter or YTD values
+    that can understate or overstate annual metrics (e.g., revenue). If no FY is
+    present for a tag, callers should consider alternate tags.
+    """
     ann: Dict[int, float] = {}
     for item in series:
         try:
             fy = item.get("fy")
-            fp = item.get("fp")
+            fp = str(item.get("fp") or "").upper().strip()
+            if fp not in {"FY", "FYR"}:
+                continue
             val = float(item.get("val")) * float(scale)
         except Exception:
             continue
-        if not fy or fp not in ("FY", "Q4", "FYR"):
-            # Prefer full-year; many facts have only FY
-            pass
         end = item.get("end")
         year = None
-        if fy:
+        if fy is not None:
             try:
                 year = int(fy)
             except Exception:
@@ -140,11 +145,7 @@ def _to_annual(series: Iterable[dict], scale: float = 1.0) -> Dict[int, float]:
                 continue
         if year is None:
             continue
-        # Keep latest filing per year
-        if year not in ann:
-            ann[year] = val
-        else:
-            ann[year] = val
+        ann[year] = val
     return ann
 
 
@@ -222,7 +223,10 @@ LEASE_LIAB_TAGS = [
     "OperatingLeaseLiabilityCurrent",
 ]
 SHARES_TAGS = [
+    # Prefer point-in-time outstanding, then fall back to weighted-average shares
     "CommonStockSharesOutstanding",
+    "WeightedAverageNumberOfDilutedSharesOutstanding",
+    "WeightedAverageNumberOfSharesOutstandingBasic",
 ]
 TAX_RATE_TAGS = [
     "EffectiveIncomeTaxRateContinuingOperations",

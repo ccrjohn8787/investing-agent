@@ -17,6 +17,14 @@ ci:
 eval:
 	pytest -q -m eval
 
+# Acceptance/Canary tests
+acceptance:
+	pytest -q tests/acceptance
+
+# Eval JSON report
+eval_report:
+	python scripts/eval_report.py --out out/eval_summary.json
+
 # Golden canaries
 golden:
 	python scripts/write_canary.py $(PATH)

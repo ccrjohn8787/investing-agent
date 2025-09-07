@@ -17,6 +17,7 @@ from investing_agent.agents.consensus import apply as consensus_apply
 from investing_agent.agents.market import apply as market_apply
 from investing_agent.agents.plotting import plot_driver_paths, plot_sensitivity_heatmap, plot_pv_bridge, plot_price_vs_value
 from investing_agent.agents.router import choose_next
+from investing_agent.orchestration.fsm import Context as FSMContext, State as FSMState, step as fsm_step
 from investing_agent.agents.critic import check_report
 from investing_agent.agents.sensitivity import compute_sensitivity
 from investing_agent.agents.valuation import build_inputs_from_fundamentals
@@ -285,6 +286,17 @@ def main():
     unchanged_steps_break = int(router_cfg.get("unchanged_steps_break", 2))
     last_admitted_news_big = False
 
+    # Initialize FSM state to mirror router context
+    fsm_ctx = FSMContext(
+        delta_value_threshold=delta_value_threshold,
+        unchanged_steps_break=unchanged_steps_break,
+        have_consensus=bool(consensus_data) and bool(router_cfg.get("enable_consensus", False)),
+        have_comparables=isinstance(peers, list) and bool(router_cfg.get("enable_comparables", False)),
+        allow_news=bool(router_cfg.get("enable_news", False)),
+        max_iters=int(args.max_iters),
+    )
+    fsm_state = FSMState(iter=int(ctx["iter"]), last_route=None, last_value=None, ran_sensitivity_recent=False, within_threshold_steps=0)
+
     while True:
         # Convergence gate: if we are within threshold for required steps and have no blockers, stop
         # Compute critic issues on-demand (cheap)
@@ -309,7 +321,8 @@ def main():
             llm_error_block = False
         if _should_end(ctx, critic_issues, last_admitted_news_big, steps_break=unchanged_steps_break) and not llm_error_block:
             break
-        route, _ = choose_next(I, V, ctx)
+        # Use FSM to select route deterministically (mirrors router heuristics)
+        fsm_state, route, _notes = fsm_step(fsm_state, fsm_ctx, float(V.value_per_share))
         if route == "end":
             break
         prev_v = V.value_per_share
@@ -386,6 +399,7 @@ def main():
             w = np.array(I.wacc)
             drv_png = plot_driver_paths(len(g), g, m, w)
             ctx["ran_sensitivity_recent"] = True
+            fsm_state.ran_sensitivity_recent = True
         else:
             # Non-news step resets the flag for gating of new admissions
             last_admitted_news_big = False
@@ -396,6 +410,9 @@ def main():
         # Update convergence counters using relative delta threshold
         _update_convergence_state(ctx, prev_v, V.value_per_share, threshold=delta_value_threshold, steps_break=unchanged_steps_break)
         ctx["last_value"] = prev_v
+        fsm_state.iter = int(ctx["iter"])  # keep approximately in sync
+        fsm_state.last_route = route
+        fsm_state.last_value = float(prev_v)
 
     # Build charts
     bridge_png = plot_pv_bridge(V)

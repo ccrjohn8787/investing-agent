@@ -146,10 +146,27 @@ def run_writer_case(case: EvalCase) -> EvalResult:
         if s in md:
             failures.append(f"unexpected substring present: {s!r}")
 
+    # Optional HTML checks
+    html_failures: List[str] = []
+    checks = case.checks or {}
+    if checks.get("html_contains") or checks.get("html_sections"):
+        try:
+            from investing_agent.agents.html_writer import render_html_report
+            html = render_html_report(I, V, fundamentals=f, companyfacts_json={"facts": {"us-gaap": {}}})
+            for s in checks.get("html_contains", []) or []:
+                if s not in html:
+                    html_failures.append(f"html missing substring: {s!r}")
+            for sec in checks.get("html_sections", []) or []:
+                if sec not in html:
+                    html_failures.append(f"html missing section: {sec!r}")
+        except Exception as e:
+            html_failures.append(f"html render exception: {e}")
+
+    all_failures = failures + html_failures
     return EvalResult(
         name=case.name,
-        passed=len(failures) == 0,
-        failures=failures,
+        passed=len(all_failures) == 0,
+        failures=all_failures,
         details={"len_md": len(md)},
     )
 
@@ -319,6 +336,47 @@ def run_case(path: Path) -> EvalResult:
         return run_market_case(case)
     if case.agent == "news":
         return run_news_case(case)
+    if case.agent == "critic_rule":
+        # Build a base report, then inject seeded violations per params, and ensure Critic flags them
+        p = case.params
+        f = Fundamentals(
+            company=p.get("company", "EvalCo"),
+            ticker=p.get("ticker", "EVAL"),
+            currency=p.get("currency", "USD"),
+            revenue={2023: float(p.get("revenue_t0", 1000.0))},
+            ebit={2023: float(p.get("ebit_t0", 120.0))},
+            shares_out=float(p.get("shares_out", 1000.0)),
+            tax_rate=float(p.get("tax_rate", 0.25)),
+        )
+        horizon = int(p.get("horizon", 6))
+        I = build_inputs_from_fundamentals(f, horizon=horizon)
+        # Add provenance so citations requirement engages
+        I.provenance.source_url = "local://fixture"
+        I.provenance.content_sha256 = "abcd"
+        V = kernel_value(I)
+        from investing_agent.agents.critic import check_report
+        md = render_report(I, V)
+        # Mutations
+        mode = (p.get("violation") or "none").lower()
+        if mode == "missing_citations":
+            if "## Citations" in md:
+                head, tail = md.split("## Citations", 1)
+                md = head + "\n"  # drop citations section entirely
+        elif mode == "unresolved_snap":
+            md += "\n\n## Appendix\nSee source [ref:snap:deadbeef]"
+        elif mode == "arithmetic_mismatch":
+            md = md.replace("- PV(TV):", "- PV(TV): 9999999", 1)
+        elif mode == "naked_numbers":
+            md += "\n\n## Thesis\nWe expect 5% growth without caveats.\n"
+        elif mode == "invalid_table":
+            md += "\n\n## Appendix\nSee table [ref:table:Nonexistent Section]"
+        elif mode == "invalid_computed":
+            md += "\n\n## Appendix\nBad key [ref:computed:valuation.unknown_metric]"
+        elif mode == "multi_refs_invalid":
+            md += "\n\n## Appendix\nCombo [ref:computed:valuation.value_per_share; table:Ghost; snap:deadbeef]"
+        issues = check_report(md, I, V, manifest=None)
+        passed = len(issues) > 0
+        return EvalResult(name=case.name, passed=passed, failures=[] if passed else ["critic failed to flag issues"], details={"issues": issues})
     if case.agent == "research_llm":
         p = case.params
         cassette = p.get("cassette")

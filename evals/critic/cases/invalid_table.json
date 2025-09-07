@@ -1,0 +1,6 @@
+{
+  "name": "critic_invalid_table_ref",
+  "agent": "critic_rule",
+  "params": { "violation": "invalid_table" },
+  "checks": {}
+}

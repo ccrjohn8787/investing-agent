@@ -1,0 +1,6 @@
+{
+  "name": "critic_invalid_computed_key",
+  "agent": "critic_rule",
+  "params": { "violation": "invalid_computed" },
+  "checks": {}
+}

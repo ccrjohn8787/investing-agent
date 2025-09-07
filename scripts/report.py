@@ -643,7 +643,7 @@ def main():
                 from investing_agent.agents.news import llm_summarize
                 news_summary = llm_summarize(news_bundle, I, scenario=cfg, cassette_path=args.news_llm_cassette)
                 # Record model id used in manifest
-                manifest.models["news"] = "gpt-4.1-mini@deterministic:cassette"
+                manifest.models["news"] = "gpt-4.1-mini@cassette;temp=0;top_p=1;seed=2025"
             else:
                 news_summary = heuristic_summarize(news_bundle, I, scenario=cfg)
             I = news_ingest(I, V, news_summary, scenario=cfg)
@@ -670,11 +670,11 @@ def main():
                 model_id = model_meta.get("model") or model_meta.get("model_id")
                 params = model_meta.get("params")
                 if model_id and params:
-                    manifest.models["writer"] = f"{model_id}@cassette"
+                    manifest.models["writer"] = f"{model_id}@cassette;temp=0;top_p=1;seed=2025"
                 elif model_id:
-                    manifest.models["writer"] = str(model_id)
+                    manifest.models["writer"] = f"{model_id};temp=0;top_p=1;seed=2025"
                 else:
-                    manifest.models["writer"] = "writer-llm@cassette"
+                    manifest.models["writer"] = "writer-llm@cassette;temp=0;top_p=1;seed=2025"
             # Persist writer LLM output for canaries
             try:
                 (out_dir / "writer_llm.json").write_text(json.dumps(writer_llm_out.model_dump(), indent=2))
@@ -706,7 +706,7 @@ def main():
                     # Also write a JSON for direct use later if desired
                     (out_dir / "writer_llm.json").write_text(json.dumps(resp, indent=2))
                     manifest.add_artifact("writer_llm.json", resp)
-                    manifest.models["writer"] = f"{args.llm_model}@deterministic:live"
+                    manifest.models["writer"] = f"{args.llm_model}@live;temp=0;top_p=1;seed=2025"
                     # Do not modify writer_llm_out here to keep report stable without live dependency
             except Exception:
                 pass
@@ -737,7 +737,7 @@ def main():
                 insights_bundle = bundle
                 (out_dir / "insights.json").write_text(bundle.model_dump_json(indent=2))
                 manifest.add_artifact("insights.json", bundle.model_dump())
-                manifest.models["research"] = "gpt-4.1-mini@deterministic:cassette"
+                manifest.models["research"] = "gpt-4.1-mini@cassette;temp=0;top_p=1;seed=2025"
             elif args.insights_llm_live:
                 from investing_agent.agents.research_llm import generate_insights
                 bundle = generate_insights(texts, cassette_path=None, live=True, cassette_out=(args.insights_llm_cassette_out or str(out_dir / "cassettes" / "insights.jsonl")))
@@ -745,7 +745,7 @@ def main():
                 # Persist even if empty
                 (out_dir / "insights.json").write_text(bundle.model_dump_json(indent=2))
                 manifest.add_artifact("insights.json", bundle.model_dump())
-                manifest.models["research"] = "gpt-4.1-mini@deterministic:live"
+                manifest.models["research"] = "gpt-4.1-mini@live;temp=0;top_p=1;seed=2025"
         except Exception:
             pass
 
