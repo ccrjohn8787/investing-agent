@@ -15,6 +15,72 @@ def _clamp(x: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, x))
 
 
+def _smooth_tail(
+    path: list[float],
+    start_idx: int,
+    stable: float,
+    *,
+    mode: str = "slope",
+    slope: float = 0.005,
+    half_life_years: float = 2.0,
+    bounds: tuple[float, float] = (-1.0, 1.0),
+) -> list[float]:
+    """Smooth path[start_idx:] toward stable value.
+
+    Modes:
+    - slope: move toward stable by at most `slope` per year; schedule ensures last element reaches stable
+      if horizon allows (never overshoots; monotonic toward target).
+    - half_life: exponential approach with factor k = 1 - 0.5**(1/half_life_years).
+    - linear_span: internal mode used to preserve legacy behavior (linear interpolation to stable by T-1).
+    Bounds are enforced at each step.
+    """
+    T = len(path)
+    if start_idx <= 0 or start_idx >= T:
+        return path
+    lo, hi = bounds
+
+    # Ensure previous value exists as the base for smoothing
+    prev = float(path[start_idx - 1])
+    target = float(stable)
+
+    if mode == "linear_span":
+        span = max(1, T - start_idx)
+        for i in range(start_idx, T):
+            alpha = (i - start_idx + 1) / float(span)
+            v = (1.0 - alpha) * prev + alpha * target
+            path[i] = _clamp(v, lo, hi)
+        return path
+
+    if mode == "half_life":
+        # Compute per-step approach factor
+        try:
+            k = 1.0 - (0.5 ** (1.0 / float(half_life_years)))
+        except Exception:
+            k = 1.0 - (0.5 ** 0.5)
+        for i in range(start_idx, T):
+            v_prev = float(path[i - 1]) if i > 0 else prev
+            v = v_prev + (target - v_prev) * k
+            path[i] = _clamp(v, lo, hi)
+        return path
+
+    # Default: slope mode
+    s = abs(float(slope))
+    # We schedule steps so that the last element equals target without exceeding slope per step.
+    for i in range(start_idx, T):
+        v_prev = float(path[i - 1]) if i > 0 else prev
+        gap = target - v_prev
+        remaining_steps = (T - 1) - i  # steps after this one
+        # Minimum step needed now so that we can still finish within remaining steps at <= s each
+        min_needed = max(0.0, abs(gap) - s * max(0, remaining_steps))
+        step = min(s, max(0.0, min_needed))
+        v = v_prev + (step if gap >= 0 else -step)
+        # Do not overshoot target due to rounding
+        if (gap >= 0 and v > target) or (gap < 0 and v < target):
+            v = target
+        path[i] = _clamp(v, lo, hi)
+    return path
+
+
 def apply(I: InputsI, consensus_data: dict | None = None) -> InputsI:
     """
     Consensus agent (contract stub — eval-first).
@@ -91,27 +157,48 @@ def apply(I: InputsI, consensus_data: dict | None = None) -> InputsI:
                 last_m_idx = max(last_m_idx, i)
             prev = r
 
-    # Gentle smoothing: trend tail back to stable values over remaining horizon
+    # Smoothing: trend tail back to stable values over remaining horizon
     smooth = bool(consensus_data.get("smooth_to_stable", True)) if consensus_data else True
     if smooth and T > 0:
+        # Extract smoothing config
+        smoothing_cfg = (consensus_data or {}).get("smoothing") or {}
+        # Back-compat: if no explicit smoothing config provided, use legacy linear behavior
+        has_explicit_cfg = bool(smoothing_cfg)
+        mode = str(smoothing_cfg.get("mode", "slope" if has_explicit_cfg else "linear_span")).lower()
+        slope_bps = float(smoothing_cfg.get("slope_bps_per_year", 50.0))
+        slope = slope_bps / 10000.0
+        half_life_years = float(smoothing_cfg.get("half_life_years", 2.0))
+        # Bounds (optional overrides)
+        bcfg = (consensus_data or {}).get("bounds") or {}
+        g_bounds = tuple(bcfg.get("growth", [-0.99, 0.60]))  # type: ignore
+        m_bounds = tuple(bcfg.get("margin", [-0.60, 0.60]))  # type: ignore
+
         # Growth toward stable_growth
         sg = float(J.drivers.stable_growth)
-        start_idx = last_g_idx + 1
-        if start_idx < T and last_g_idx >= 0:
-            g_last = float(g_path[last_g_idx])
-            span = max(1, T - start_idx)
-            for i in range(start_idx, T):
-                alpha = (i - start_idx + 1) / float(span)
-                g_path[i] = _clamp((1 - alpha) * g_last + alpha * sg, -0.99, 0.60)
+        start_idx_g = last_g_idx + 1
+        if start_idx_g < T and last_g_idx >= 0:
+            g_path = _smooth_tail(
+                g_path,
+                start_idx_g,
+                sg,
+                mode=mode,
+                slope=slope,
+                half_life_years=half_life_years,
+                bounds=(float(g_bounds[0]), float(g_bounds[1])),
+            )
         # Margin toward stable_margin
         sm = float(J.drivers.stable_margin)
         start_idx_m = last_m_idx + 1
         if start_idx_m < T and last_m_idx >= 0:
-            m_last = float(m_path[last_m_idx])
-            span_m = max(1, T - start_idx_m)
-            for i in range(start_idx_m, T):
-                alpha = (i - start_idx_m + 1) / float(span_m)
-                m_path[i] = _clamp((1 - alpha) * m_last + alpha * sm, -0.60, 0.60)
+            m_path = _smooth_tail(
+                m_path,
+                start_idx_m,
+                sm,
+                mode=mode,
+                slope=slope,
+                half_life_years=half_life_years,
+                bounds=(float(m_bounds[0]), float(m_bounds[1])),
+            )
 
     J.drivers.sales_growth = g_path
     J.drivers.oper_margin = m_path

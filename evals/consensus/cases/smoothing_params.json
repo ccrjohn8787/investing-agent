@@ -1,0 +1,21 @@
+{
+  "name": "consensus_smoothing_params",
+  "agent": "consensus",
+  "params": {
+    "company": "EvalCo",
+    "ticker": "EVAL",
+    "currency": "USD",
+    "revenue_t0": 1000.0,
+    "ebit_t0": 120.0,
+    "shares_out": 1000,
+    "tax_rate": 0.25,
+    "horizon": 8,
+    "consensus": {
+      "growth": [0.12, 0.11],
+      "margin": [0.18, 0.175],
+      "smooth_to_stable": true,
+      "smoothing": { "mode": "half_life", "half_life_years": 1.5 }
+    }
+  },
+  "checks": { "tol": 1e-2, "tail_to_stable": true }
+}

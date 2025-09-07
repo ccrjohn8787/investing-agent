@@ -50,3 +50,52 @@ def test_consensus_direct_growth_and_margin_arrays():
     I2 = consensus_apply(I, consensus_data=consensus)
     assert I2.drivers.sales_growth[:3] == [0.12, 0.11, 0.10]
     assert I2.drivers.oper_margin[:3] == [0.18, 0.175, 0.17]
+
+
+def test_consensus_slope_smoothing():
+    I = base_inputs(T=8)
+    # Far from stable initially; ensure slope large enough to reach by horizon
+    consensus = {
+        "growth": [0.12, 0.11],
+        "margin": [0.18, 0.175],
+        "smooth_to_stable": True,
+        "smoothing": {"mode": "slope", "slope_bps_per_year": 200},  # 2% per year
+    }
+    I2 = consensus_apply(I, consensus_data=consensus)
+    # Overrides preserved
+    assert I2.drivers.sales_growth[:2] == [0.12, 0.11]
+    assert I2.drivers.oper_margin[:2] == [0.18, 0.175]
+    # Monotonic approach toward stable; last equals stable (within tol)
+    tol = 1e-9
+    sg = I2.drivers.stable_growth
+    sm = I2.drivers.stable_margin
+    # Growth tail monotonic toward sg
+    tail_g = I2.drivers.sales_growth[1:]
+    for a, b in zip(tail_g, tail_g[1:]):
+        # moving downward toward stable
+        assert (a >= b) or abs(a - b) < 1e-12
+    assert abs(I2.drivers.sales_growth[-1] - sg) < tol
+    # Margin tail monotonic toward sm
+    tail_m = I2.drivers.oper_margin[1:]
+    for a, b in zip(tail_m, tail_m[1:]):
+        assert (a >= b) or abs(a - b) < 1e-12
+    assert abs(I2.drivers.oper_margin[-1] - sm) < tol
+
+
+def test_consensus_half_life_smoothing():
+    I = base_inputs(T=8)
+    consensus = {
+        "growth": [0.12, 0.11],
+        "margin": [0.18, 0.175],
+        "smooth_to_stable": True,
+        "smoothing": {"mode": "half_life", "half_life_years": 1.5},
+    }
+    I2 = consensus_apply(I, consensus_data=consensus)
+    # Overrides preserved
+    assert I2.drivers.sales_growth[:2] == [0.12, 0.11]
+    assert I2.drivers.oper_margin[:2] == [0.18, 0.175]
+    # Exponential approach: last element close to stable within tolerance
+    sg = I2.drivers.stable_growth
+    sm = I2.drivers.stable_margin
+    assert abs(I2.drivers.sales_growth[-1] - sg) < 1e-2
+    assert abs(I2.drivers.oper_margin[-1] - sm) < 1e-2
