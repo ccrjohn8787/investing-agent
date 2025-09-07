@@ -1,0 +1,23 @@
+{
+  "name": "byd_writer_sections",
+  "agent": "writer",
+  "params": {
+    "company": "BYD Company",
+    "ticker": "BYD",
+    "horizon": 6,
+    "writer_llm_cassette": "evals/writer_llm/cassettes/byd_writer.json",
+    "insights": "evals/research/cassettes/byd_insights.json"
+  },
+  "checks": {
+    "contains": [
+      "## Business Model",
+      "## Thesis",
+      "## Drivers",
+      "## Risks",
+      "## Scenarios",
+      "## Market vs Value",
+      "## Insights"
+    ]
+  }
+}
+

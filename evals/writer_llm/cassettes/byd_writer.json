@@ -1,0 +1,51 @@
+{
+  "metadata": { "model": "gpt-4.1-mini", "params": { "temperature": 0, "top_p": 1, "seed": 2025 } },
+  "sections": [
+    {
+      "title": "Business Model",
+      "paragraphs": [
+        "BYD operates across vehicles, batteries, and components, with scale advantages and vertical integration.",
+        "See computed tables for per-year drivers and margins." 
+      ],
+      "refs": ["table:Per-Year Detail", "snap:bydsha1234"]
+    },
+    {
+      "title": "Thesis",
+      "paragraphs": [
+        "We assume durable growth converging to stable levels, with value anchored on discounted FCFF.",
+        "Pricing power and capital efficiency remain key assumptions." 
+      ],
+      "refs": ["computed:valuation.value_per_share", "section:Terminal Value", "snap:bydsha1234"]
+    },
+    {
+      "title": "Drivers",
+      "paragraphs": [
+        "Growth and margin paths trend toward stable targets per scenario settings.",
+        "Sales-to-capital reflects reinvestment needs implied by growth." 
+      ],
+      "refs": ["table:Per-Year Detail"]
+    },
+    {
+      "title": "Risks",
+      "paragraphs": [
+        "Execution, pricing pressure, and policy shifts (tariffs) pose risks to the base case." 
+      ],
+      "refs": []
+    },
+    {
+      "title": "Scenarios",
+      "paragraphs": [
+        "Scenario toggles govern consensus/comps/news steps and convergence thresholds." 
+      ],
+      "refs": []
+    },
+    {
+      "title": "Market vs Value",
+      "paragraphs": [
+        "We compare last close to intrinsic value per share for framing discount/premium." 
+      ],
+      "refs": []
+    }
+  ]
+}
+

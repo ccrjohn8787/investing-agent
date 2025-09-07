@@ -1,0 +1,23 @@
+{
+  "company": "BYD Company",
+  "ticker": "BYD",
+  "currency": "USD",
+  "shares_out": 10000.0,
+  "tax_rate": 0.25,
+  "revenue_t0": 100000.0,
+  "net_debt": 0.0,
+  "cash_nonop": 0.0,
+  "drivers": {
+    "sales_growth": [0.15, 0.12, 0.10, 0.08, 0.06, 0.05, 0.04, 0.03],
+    "oper_margin": [0.09, 0.10, 0.11, 0.12, 0.13, 0.13, 0.14, 0.14],
+    "stable_growth": 0.03,
+    "stable_margin": 0.14
+  },
+  "sales_to_capital": [2.0, 2.1, 2.2, 2.3, 2.4, 2.4, 2.5, 2.5],
+  "wacc": [0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08],
+  "macro": {"risk_free_curve": [0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04], "erp": 0.05, "country_risk": 0.0},
+  "discounting": {"mode": "end"},
+  "leases": {"include": true},
+  "provenance": {"vendor": "benchmark", "content_sha256": "bydsha1234"}
+}
+

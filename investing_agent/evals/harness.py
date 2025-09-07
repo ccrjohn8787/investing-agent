@@ -11,6 +11,8 @@ except Exception:  # pragma: no cover
     yaml = None
 
 from investing_agent.agents.writer import render_report
+from investing_agent.schemas.research import InsightBundle
+from investing_agent.schemas.writer_llm import WriterLLMOutput
 from investing_agent.agents.valuation import build_inputs_from_fundamentals
 from investing_agent.kernels.ginzu import value as kernel_value
 from investing_agent.schemas.fundamentals import Fundamentals
@@ -67,7 +69,25 @@ def run_writer_case(case: EvalCase) -> EvalResult:
     horizon = int(p.get("horizon", 5))
     I = build_inputs_from_fundamentals(f, horizon=horizon)
     V = kernel_value(I)
-    md = render_report(I, V)
+    # Optional cassettes for writer LLM and insights
+    p_writer = case.params
+    llm_out = None
+    insights = None
+    try:
+        wpath = p_writer.get("writer_llm_cassette")
+        if wpath:
+            wdata = json.loads(Path(wpath).read_text())
+            llm_out = WriterLLMOutput.model_validate(wdata)
+    except Exception:
+        llm_out = None
+    try:
+        ipath = p_writer.get("insights")
+        if ipath:
+            idata = json.loads(Path(ipath).read_text())
+            insights = InsightBundle.model_validate(idata)
+    except Exception:
+        insights = None
+    md = render_report(I, V, llm_output=llm_out, insights=insights)
 
     failures: List[str] = []
     checks = case.checks or {}
@@ -251,6 +271,29 @@ def run_case(path: Path) -> EvalResult:
         return run_market_case(case)
     if case.agent == "news":
         return run_news_case(case)
+    if case.agent == "critic_llm":
+        # Minimal harness: build InputsI/V, render report, run LLM critic cassette and assert min issues
+        p = case.params
+        f = Fundamentals(
+            company=p.get("company", "EvalCo"),
+            ticker=p.get("ticker", "EVAL"),
+            currency=p.get("currency", "USD"),
+            revenue={2023: float(p.get("revenue_t0", 1000.0))},
+            ebit={2023: float(p.get("ebit_t0", 120.0))},
+            shares_out=float(p.get("shares_out", 1000.0)),
+            tax_rate=float(p.get("tax_rate", 0.25)),
+        )
+        horizon = int(p.get("horizon", 6))
+        I = build_inputs_from_fundamentals(f, horizon=horizon)
+        V = kernel_value(I)
+        md = render_report(I, V)
+        cassette = p.get("cassette") or "evals/critic_llm/cassettes/sample_critique.json"
+        from investing_agent.agents.critic_llm import check as check_llm
+        issues = check_llm(md, I, V, cassette_path=cassette)
+        need = int(case.checks.get("min_issues", 1))
+        passed = len(issues) >= need
+        fails = [] if passed else ["expected LLM issues not found"]
+        return EvalResult(name=case.name, passed=passed, failures=fails, details={"issues": issues})
     raise NotImplementedError(f"Unsupported agent for eval: {case.agent}")
 
 
