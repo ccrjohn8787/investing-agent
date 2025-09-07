@@ -27,6 +27,7 @@ router:                     # toggles for agents
   # Convergence thresholds (optional)
   delta_value_threshold: 0.005   # stop when |Δvps| ≤ 0.5% across two steps
   unchanged_steps_break: 2       # consecutive steps within threshold to stop
+  enable_llm_critic: false       # optional LLM critic (cassette-only) gate
 
 market_solver:              # bounded least-squares settings
   weights:

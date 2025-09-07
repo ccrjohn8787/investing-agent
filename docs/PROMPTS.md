@@ -23,3 +23,11 @@ See AGENTS.md for governance and PR requirements.
 - Models must be configured deterministically: temperature=0, top_p=1, seed=2025.
 - CI uses cassettes only; no live LLM calls permitted.
 - Use `--writer llm|hybrid --writer-llm-cassette path/to/cassette.json` to merge narrative sections between "## Summary" and "## Per-Year Detail". Numeric values remain sourced from code; Critic validates references.
+
+Insights Context
+- Writer can also consume an `InsightBundle` via `--insights path/to/insights.json`.
+- Insights render under a dedicated section with claims, tags, windows, confidence, quotes and `[snap:...]` tokens.
+
+LLM Critic (Cassette)
+- Optional, deterministic critique loaded from cassette JSON; no live calls in CI.
+- Enable in supervisor via scenario `router.enable_llm_critic: true` and CLI `--critic-llm-cassette path/to/critique.json`.

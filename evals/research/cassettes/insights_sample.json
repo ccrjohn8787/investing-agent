@@ -1,0 +1,25 @@
+{
+  "cards": [
+    {
+      "claim": "Segment A shows improving margins into next year.",
+      "tags": ["margin", "segment"],
+      "start_year_offset": 0,
+      "end_year_offset": 1,
+      "confidence": 0.7,
+      "quotes": [
+        { "text": "Margins improved in Q4 and are expected to continue.", "snapshot_ids": ["abcd1234"], "sources": ["https://sec.example/10k"] }
+      ]
+    },
+    {
+      "claim": "Management highlights capital discipline and lower reinvestment needs.",
+      "tags": ["capex", "s2c"],
+      "start_year_offset": 1,
+      "end_year_offset": 3,
+      "confidence": 0.6,
+      "quotes": [
+        { "text": "Capex intensity trending lower per guidance.", "snapshot_ids": ["abcd1234"] }
+      ]
+    }
+  ]
+}
+

@@ -60,6 +60,8 @@ Reports
 - Scenario presets: `--scenario baseline|cautious|aggressive` (loads from `configs/scenarios/`).
 - Apply consensus (near-term revenue/EBIT): `--consensus path/to/consensus.json`.
 - LLM writer (cassette): `--writer llm --writer-llm-cassette evals/writer_llm/cassettes/sample_output.json`
+ - Insights (cassette): `--insights evals/research/cassettes/insights_sample.json`
+ - Optional LLM critic (cassette via supervisor): `--critic-llm-cassette evals/critic_llm/cassettes/sample_critique.json` with scenario `router.enable_llm_critic: true`.
 
 Consensus Smoothing (via scenario or direct consensus_data)
 - consensus.smoothing: `{ mode: slope|half_life, slope_bps_per_year?: number, half_life_years?: number }`

@@ -173,7 +173,7 @@ def main():
     ap.add_argument("--html", action="store_true", help="Also write HTML report next to Markdown")
     ap.add_argument("--writer", choices=["code", "llm", "hybrid"], default="code", help="Writer mode: code-only, cassette LLM, or hybrid (narrative added)")
     ap.add_argument("--writer-llm-cassette", help="Path to an LLM writer cassette JSON (deterministic narrative)")
-    ap.add_argument("--insights", help="Optional path to insights JSON (reserved for future use)")
+    ap.add_argument("--insights", help="Optional path to insights JSON (InsightBundle)")
     ap.add_argument("--news", action="store_true", help="Include News agent (fetch recent RSS and propose impacts)")
     ap.add_argument("--news-window", type=int, default=14, help="News recency window in days")
     ap.add_argument("--news-sources", help="Comma-separated RSS/Atom URLs for news sources (override defaults)")
@@ -669,6 +669,18 @@ def main():
         except Exception:
             writer_llm_out = None
 
+    # Insights bundle (optional)
+    insights_bundle = None
+    if args.insights:
+        try:
+            from investing_agent.schemas.research import InsightBundle
+            text = Path(args.insights).read_text()
+            data = json.loads(text)
+            insights_bundle = InsightBundle.model_validate(data)
+            manifest.add_artifact("insights.json", insights_bundle.model_dump())
+        except Exception:
+            insights_bundle = None
+
     t0 = _time.time()
     md = render_report(
         I,
@@ -680,6 +692,7 @@ def main():
         pv_bridge_png=bridge_png,
         price_vs_value_png=price_png,
         news=news_summary,
+        insights=insights_bundle,
         llm_output=writer_llm_out,
     )
     # Scenario section (if provided)

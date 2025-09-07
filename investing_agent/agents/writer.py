@@ -12,6 +12,7 @@ from investing_agent.schemas.fundamentals import Fundamentals
 from investing_agent.schemas.inputs import InputsI
 from investing_agent.schemas.valuation import ValuationV
 from investing_agent.schemas.news import NewsSummary
+from investing_agent.schemas.research import InsightBundle
 try:
     from investing_agent.schemas.writer_llm import WriterLLMOutput
     from investing_agent.agents.writer_llm import merge_llm_sections
@@ -31,6 +32,7 @@ def render_report(
     pv_bridge_png: Optional[bytes] = None,
     price_vs_value_png: Optional[bytes] = None,
     news: Optional[NewsSummary] = None,
+    insights: Optional[InsightBundle] = None,
     llm_output: Optional["WriterLLMOutput"] = None,
 ) -> str:
     """
@@ -260,6 +262,22 @@ def render_report(
                 window = f"Y+{imp.start_year_offset}→Y+{imp.end_year_offset}"
                 refs = ",".join(imp.fact_ids)
                 lines.append(f"| {imp.driver} | {window} | {imp.delta:+.4f} | {imp.confidence:.2f} | {refs} |")
+
+    # Insights section (evidence-backed claims)
+    if insights and insights.cards:
+        lines.append("")
+        lines.append("## Insights")
+        for card in insights.cards:
+            tags = f" [tags: {', '.join(card.tags)}]" if card.tags else ""
+            window = f" [window: Y+{int(card.start_year_offset)}→Y+{int(card.end_year_offset)}]"
+            conf = f" [confidence: {float(card.confidence):.2f}]"
+            lines.append(f"- {card.claim}{tags}{window}{conf}")
+            # Quotes beneath the claim
+            for q in card.quotes[:8]:
+                snaps = " ".join([f"[snap:{sid}]" for sid in (q.snapshot_ids or [])])
+                srcs = " ".join([f"[source:{u}]" for u in (q.sources or [])])
+                meta = f" {snaps} {srcs}".strip()
+                lines.append(f"  \"{q.text}\"{(' ' + meta) if meta else ''}")
 
     # Provenance
     lines.append("## Provenance")

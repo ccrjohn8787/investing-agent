@@ -94,6 +94,7 @@ def main():
     ap.add_argument("--news-window", type=int, default=14, help="News recency window in days")
     ap.add_argument("--news-sources", help="Comma-separated RSS/Atom URLs for news sources (override defaults)")
     ap.add_argument("--news-llm-cassette", help="Path to an LLM cassette JSON to summarize news deterministically")
+    ap.add_argument("--critic-llm-cassette", help="Path to an LLM critic cassette JSON (deterministic)")
     args = ap.parse_args()
     if not args.ticker:
         raise SystemExit("Provide ticker as arg or set CT/TICKER")
@@ -293,7 +294,20 @@ def main():
             critic_issues = check_report(tmp_md, I, V, manifest=manifest)
         except Exception:
             critic_issues = []
-        if _should_end(ctx, critic_issues, last_admitted_news_big, steps_break=unchanged_steps_break):
+        # Optional LLM critic (cassette-based)
+        llm_error_block = False
+        try:
+            router_llm = bool(router_cfg.get("enable_llm_critic", False))
+            if router_llm and args.critic_llm_cassette:
+                from investing_agent.agents.critic_llm import check as check_llm
+                llm_issues = check_llm(tmp_md, I, V, cassette_path=args.critic_llm_cassette)
+                # Log model id used
+                manifest.models["critic"] = "gpt-4.1-mini@deterministic:cassette"
+                # Any error severity is a blocker
+                llm_error_block = any(str(x).lower().startswith("error:") for x in llm_issues)
+        except Exception:
+            llm_error_block = False
+        if _should_end(ctx, critic_issues, last_admitted_news_big, steps_break=unchanged_steps_break) and not llm_error_block:
             break
         route, _ = choose_next(I, V, ctx)
         if route == "end":

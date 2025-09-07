@@ -1,0 +1,11 @@
+{
+  "name": "critic_llm_simple",
+  "agent": "critic_llm",
+  "params": {
+    "company": "EvalCo",
+    "ticker": "EVAL",
+    "cassette": "evals/critic_llm/cassettes/sample_critique.json"
+  },
+  "checks": {"min_issues": 1}
+}
+

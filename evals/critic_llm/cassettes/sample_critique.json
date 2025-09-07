@@ -1,0 +1,7 @@
+{
+  "issues": [
+    { "severity": "error", "code": "STRUCTURE", "message": "Missing sources in one insight quote." },
+    { "severity": "warn", "code": "STYLE", "message": "Avoid hyperbolic language." }
+  ]
+}
+
