@@ -1,0 +1,7 @@
+{
+  "name": "critic_unresolved_snap",
+  "agent": "critic_rule",
+  "params": { "violation": "unresolved_snap" },
+  "checks": {}
+}
+

@@ -1,0 +1,7 @@
+{
+  "name": "critic_arithmetic_mismatch",
+  "agent": "critic_rule",
+  "params": { "violation": "arithmetic_mismatch" },
+  "checks": {}
+}
+

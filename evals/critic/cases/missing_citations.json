@@ -1,0 +1,7 @@
+{
+  "name": "critic_missing_citations",
+  "agent": "critic_rule",
+  "params": { "violation": "missing_citations" },
+  "checks": {}
+}
+

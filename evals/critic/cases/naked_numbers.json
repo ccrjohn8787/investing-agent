@@ -1,0 +1,7 @@
+{
+  "name": "critic_naked_numbers",
+  "agent": "critic_rule",
+  "params": { "violation": "naked_numbers" },
+  "checks": {}
+}
+

@@ -35,6 +35,9 @@ Getting Started
   - `pip install -e .[dev]`
   - Optional (for YAML configs): `pip install pyyaml`
 - Run tests: `pytest -q`
+- Evals only: `pytest -q -m eval` (quality gates)
+- Canary gate: `pytest -q -k canaries_golden`
+- Eval thresholds are configured in `evals/config.yaml` (e.g., writer.min_ref_paras=0.7). Writer evals enforce narrative coverage (≥70% paragraphs contain `[ref:...]`), critic evals flag seeded violations (missing citations, unresolved `[snap:…]`, arithmetic mismatch, naked numbers in narrative).
 
 Demo (no network required)
 - Generate a synthetic end-to-end report and plots:
@@ -71,6 +74,9 @@ Insights via Research Summarizer (cassette)
 Backtesting Quick Start
 - Plan JSON/YAML with jobs: `python scripts/backtest.py tests/fixtures/backtest/plan.json`
 - Outputs: `out/_backtests/<RUN_ID>/per_ticker.csv` and `summary.csv` (MAD, MAPE, median_abs_err, count).
+
+Web UI
+- Generate static index: `make ui` — writes `out/index.html` listing artifacts by ticker.
 
 Consensus Smoothing (via scenario or direct consensus_data)
 - consensus.smoothing: `{ mode: slope|half_life, slope_bps_per_year?: number, half_life_years?: number }`
