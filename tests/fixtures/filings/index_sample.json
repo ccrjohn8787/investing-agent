@@ -1,0 +1,8 @@
+{
+  "items": [
+    { "type": "10-K", "date": "2024-02-20", "url": "https://edgar.example/a10k.html", "title": "Annual Report" },
+    { "type": "8-K",  "date": "2024-03-05", "url": "https://edgar.example/b8k.html",  "title": "8-K Current" },
+    { "type": "10-Q", "date": "2024-05-10", "url": "https://edgar.example/c10q.html", "title": "Quarterly" }
+  ]
+}
+

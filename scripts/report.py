@@ -178,6 +178,7 @@ def main():
     ap.add_argument("--news-window", type=int, default=14, help="News recency window in days")
     ap.add_argument("--news-sources", help="Comma-separated RSS/Atom URLs for news sources (override defaults)")
     ap.add_argument("--news-llm-cassette", help="Path to an LLM cassette JSON to summarize news deterministically")
+    ap.add_argument("--filings-limit", type=int, default=0, help="Fetch/cache up to N recent filings (10-K/10-Q/8-K) and record snapshots")
     args = ap.parse_args()
     if not args.ticker:
         raise SystemExit("Provide ticker as arg or set CT/TICKER")
@@ -698,6 +699,23 @@ def main():
         (out_dir / "companyfacts.json").write_text(json.dumps(cf_json))
     (out_dir / "report.md").write_text(md)
     manifest.add_artifact("report.md", md)
+    # Optional filings fetch/cache (evidence corpus; snapshot only)
+    try:
+        if int(args.filings_limit) > 0:
+            from investing_agent.connectors.filings import fetch_filings_index, fetch_filing_text, extract_text, cache_and_snapshot
+            idx = fetch_filings_index(ticker, types=["10-K", "10-Q", "8-K"], limit=int(args.filings_limit))
+            for row in idx:
+                url = row.get("url") if isinstance(row, dict) else None
+                typ = (row.get("type") if isinstance(row, dict) else None) or "filing"
+                if not url:
+                    continue
+                text, _meta = fetch_filing_text(url)
+                # Normalize/extract
+                kind = "10-K" if "10-K" in typ else ("10-Q" if "10-Q" in typ else "8-K")
+                norm = extract_text(text, kind=kind)
+                cache_and_snapshot(ticker, typ, url, norm, manifest)
+    except Exception:
+        pass
     (out_dir / "sensitivity.png").write_bytes(heat_png)
     (out_dir / "drivers.png").write_bytes(drv_png)
     (out_dir / "pv_bridge.png").write_bytes(bridge_png)
