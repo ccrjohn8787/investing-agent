@@ -24,6 +24,9 @@ router:                     # toggles for agents
   enable_consensus: false
   enable_comparables: false
   enable_news: false
+  # Convergence thresholds (optional)
+  delta_value_threshold: 0.005   # stop when |Δvps| ≤ 0.5% across two steps
+  unchanged_steps_break: 2       # consecutive steps within threshold to stop
 
 market_solver:              # bounded least-squares settings
   weights:
@@ -47,6 +50,16 @@ news:                       # News agent knobs (optional)
     margin_bps: 30          # max ±bps per impact for margin (default 30)
     s2c_abs: 0.1            # max absolute change per impact for S2C (default 0.1)
   min_confidence: 0.5       # drop impacts below this confidence (0..1)
+
+consensus:                  # Consensus smoothing (optional)
+  smooth_to_stable: true
+  smoothing:
+    mode: slope             # slope | half_life
+    slope_bps_per_year: 50  # default 50 (0.005)
+    half_life_years: 2.0    # default 2.0
+  bounds:
+    growth: [-0.99, 0.60]
+    margin: [-0.60, 0.60]
 ```
 
 Locations

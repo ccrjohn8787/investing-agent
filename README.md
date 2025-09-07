@@ -60,6 +60,11 @@ Reports
 - Scenario presets: `--scenario baseline|cautious|aggressive` (loads from `configs/scenarios/`).
 - Apply consensus (near-term revenue/EBIT): `--consensus path/to/consensus.json`.
 - LLM writer (cassette): `--writer llm --writer-llm-cassette evals/writer_llm/cassettes/sample_output.json`
+
+Consensus Smoothing (via scenario or direct consensus_data)
+- consensus.smoothing: `{ mode: slope|half_life, slope_bps_per_year?: number, half_life_years?: number }`
+- consensus.bounds: `{ growth: [min,max], margin: [min,max] }`
+- Defaults: `mode="slope"`, `slope_bps_per_year=50 (0.005)`, `half_life_years=2.0`.
 - Apply comparables (peer list): `--peers path/to/peers.json` (cap via scenario `comparables.cap_bps` or `--cap-bps`).
 - Market solver target: `--market-target last_close|none` when scenario enables market.
 - Include News: `--news` to fetch recent RSS and propose impacts.

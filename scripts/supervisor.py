@@ -5,7 +5,7 @@ import argparse
 import json
 import os
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 from datetime import datetime
 import csv
 import hashlib
@@ -17,6 +17,7 @@ from investing_agent.agents.consensus import apply as consensus_apply
 from investing_agent.agents.market import apply as market_apply
 from investing_agent.agents.plotting import plot_driver_paths, plot_sensitivity_heatmap, plot_pv_bridge, plot_price_vs_value
 from investing_agent.agents.router import choose_next
+from investing_agent.agents.critic import check_report
 from investing_agent.agents.sensitivity import compute_sensitivity
 from investing_agent.agents.valuation import build_inputs_from_fundamentals
 from investing_agent.agents.writer import render_report
@@ -51,6 +52,27 @@ def _load_json(path: Optional[str]) -> Optional[dict | list]:
         return json.loads(p.read_text())
     except Exception:
         return None
+
+
+def _rel_delta(curr: float, prev: Optional[float]) -> Optional[float]:
+    if prev is None or prev == 0:
+        return None
+    return abs(curr - prev) / abs(prev)
+
+
+def _update_convergence_state(ctx: Dict[str, Any], prev_vps: Optional[float], curr_vps: float, *, threshold: float, steps_break: int) -> None:
+    """Update ctx with within-threshold steps count and recent sensitivity flag management."""
+    rd = _rel_delta(curr_vps, prev_vps)
+    if rd is not None and rd <= threshold:
+        ctx["within_threshold_steps"] = int(ctx.get("within_threshold_steps", 0)) + 1
+    else:
+        ctx["within_threshold_steps"] = 0
+
+
+def _should_end(ctx: Dict[str, Any], critic_issues: list[str], last_admitted_news_big: bool, *, steps_break: int) -> bool:
+    if int(ctx.get("within_threshold_steps", 0)) >= int(steps_break) and not critic_issues and not last_admitted_news_big:
+        return True
+    return False
 
 
 def main():
@@ -242,12 +264,13 @@ def main():
 
     # Router context
     router_cfg = cfg.get("router", {}) if isinstance(cfg.get("router"), dict) else {}
-    ctx = {
+    ctx: Dict[str, Any] = {
         "iter": 0,
         "max_iters": int(args.max_iters),
         "last_value": None,
         "unchanged_steps": 0,
         "ran_sensitivity_recent": False,
+        "within_threshold_steps": 0,
         "have_consensus": bool(consensus_data) and bool(router_cfg.get("enable_consensus", False)),
         "have_comparables": bool(peers) and bool(router_cfg.get("enable_comparables", False)),
         "allow_news": bool(router_cfg.get("enable_news", False)),
@@ -257,7 +280,21 @@ def main():
     # Loop
     heat_png = None
     drv_png = None
+    delta_value_threshold = float(router_cfg.get("delta_value_threshold", 0.005))
+    unchanged_steps_break = int(router_cfg.get("unchanged_steps_break", 2))
+    last_admitted_news_big = False
+
     while True:
+        # Convergence gate: if we are within threshold for required steps and have no blockers, stop
+        # Compute critic issues on-demand (cheap)
+        critic_issues: list[str] = []
+        try:
+            tmp_md = render_report(I, V)
+            critic_issues = check_report(tmp_md, I, V, manifest=manifest)
+        except Exception:
+            critic_issues = []
+        if _should_end(ctx, critic_issues, last_admitted_news_big, steps_break=unchanged_steps_break):
+            break
         route, _ = choose_next(I, V, ctx)
         if route == "end":
             break
@@ -319,6 +356,8 @@ def main():
                     manifest.models["news"] = "gpt-4.1-mini@deterministic:cassette"
                 else:
                     summary = heuristic_summarize(news_bundle, I, scenario=cfg)
+                # Track whether any newly admitted impact is >= 1% (absolute)
+                last_admitted_news_big = any(abs(getattr(imp, "delta", 0.0)) >= 0.01 for imp in (summary.impacts or []))
                 I = news_ingest(I, V, summary, scenario=cfg)
                 V = kernel_value(I)
                 try:
@@ -333,10 +372,15 @@ def main():
             w = np.array(I.wacc)
             drv_png = plot_driver_paths(len(g), g, m, w)
             ctx["ran_sensitivity_recent"] = True
+        else:
+            # Non-news step resets the flag for gating of new admissions
+            last_admitted_news_big = False
         # Update loop state
         ctx["iter"] += 1
         ctx["last_route"] = route
         ctx["unchanged_steps"] = ctx.get("unchanged_steps", 0) + 1 if prev_v == V.value_per_share else 0
+        # Update convergence counters using relative delta threshold
+        _update_convergence_state(ctx, prev_v, V.value_per_share, threshold=delta_value_threshold, steps_break=unchanged_steps_break)
         ctx["last_value"] = prev_v
 
     # Build charts

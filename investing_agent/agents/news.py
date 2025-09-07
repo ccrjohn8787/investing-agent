@@ -47,7 +47,9 @@ def heuristic_summarize(bundle: NewsBundle, I: InputsI, scenario: Optional[Dict[
     facts: List[NewsItem] = []
     for it in bundle.items:
         tags = _tag_item(it.title, it.snippet or "")
-        facts.append(NewsItem(**it.model_dump(exclude_none=True), tags=tags))
+        # Avoid duplicating 'tags' when copying
+        payload = it.model_dump(exclude_none=True, exclude={"tags"})
+        facts.append(NewsItem(**payload, tags=tags))
 
     # Scenario caps
     news_cfg = (scenario or {}).get("news", {}) if isinstance(scenario, dict) else {}

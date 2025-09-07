@@ -40,7 +40,20 @@ def fetch_text(url: str, ttl_seconds: int = 86400, session: Optional[requests.Se
             return text, meta
     resp = sess.get(url, timeout=timeout)
     resp.raise_for_status()
-    text = resp.text
+    try:
+        text = resp.text  # type: ignore[attr-defined]
+    except Exception:
+        try:
+            data = resp.json()  # type: ignore[attr-defined]
+            import json as _json
+            text = _json.dumps(data)
+        except Exception:
+            # Fallback to bytes content or repr
+            try:
+                content = getattr(resp, "content", b"")
+                text = content.decode("utf-8", errors="ignore") if isinstance(content, (bytes, bytearray)) else str(content)
+            except Exception:
+                text = ""
     cache_path.write_text(text)
     meta = {
         "url": url,
@@ -49,4 +62,3 @@ def fetch_text(url: str, ttl_seconds: int = 86400, session: Optional[requests.Se
         "cache": False,
     }
     return text, meta
-
