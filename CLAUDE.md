@@ -1,0 +1,105 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Plan and Review
+
+### Before starting work
+- Always in plan mode to make a plan
+- After get the plan, make sure you write the plan to .claude/tasks/TASK_NAME.md (create one if not exist)
+- The plan should be a detailed implementation plan and the reasoning behind them, as well as tasks broken down.
+- Once you write the plan, firstly ask me to review it. Do not continue until I approve the plan.
+
+### While implementing
+- You should update the plan as you work.
+- After you complete tasks in the plan, you should update and append detailed descriptions of the changes you made, so following tasks can be easily hand over to other engineers.
+
+### Active Development Plan
+**Current Major Initiative:** DBOT Quality Gap Implementation
+- **Plan Location:** `.claude/tasks/dbot_quality_gap.md` 
+- **Objective:** Transform from numbers-only reports to story-to-numbers approach matching BYD report quality
+- **Current Priority:** P0 - LLM-Based Report Evaluation Framework
+- **Architecture:** Research-once-then-freeze with evidence pipeline and Model-PR logging
+- **Key Principles:** Evaluation-first development, strict citation discipline, deterministic reproducibility
+
+## Essential Commands
+
+### Development Setup
+```bash
+python -m venv .venv && . .venv/bin/activate
+pip install -e .[dev]
+```
+
+### Testing & Quality
+- Run all tests: `pytest -q`
+- Run evaluation tests: `pytest -q -m eval` (quality gates)
+- Run acceptance/canary tests: `pytest -q -k canaries_golden`
+- Lint: `ruff check .`
+- Format: `ruff format .` 
+- Type check: `mypy investing_agent`
+- Full CI pipeline: `make ci` (lint + mypy + tests)
+
+### Reporting & Demo
+- Generate demo report: `make demo` (synthetic data, no network)
+- Build inputs for ticker: `make build_i CT=<TICKER>`
+- Generate report for ticker: `make report CT=<TICKER>`
+- Generate reports with overrides: `python scripts/report.py <TICKER> --growth '8%,7%' --margin '12%,13%' --s2c '2.0,2.2'`
+- Web UI index: `make ui` (creates out/index.html)
+
+### Evaluation & Quality Gates
+- Evaluation report: `make eval_report`
+- Golden canary generation: `make golden PATH=<path>`
+- Golden canary check: `make golden_check`
+
+## Architecture Overview
+
+### Core Components
+
+**Schemas** (`investing_agent/schemas/`): Typed Pydantic models for all inputs, outputs, and fundamentals data structures. This defines the data contracts across the system.
+
+**Kernels** (`investing_agent/kernels/`): Pure NumPy valuation engine ("Ginzu") implementing DCF calculations with four key drivers: sales growth, operating margin, cost of capital (WACC), and reinvestment efficiency (sales-to-capital).
+
+**Connectors** (`investing_agent/connectors/`): External data sources including SEC EDGAR (fundamentals), Stooq/Yahoo (prices), UST (risk-free rates), and news feeds. All with caching and offline fallbacks.
+
+**Agents** (`investing_agent/agents/`): Modular processing units including:
+- Valuation Builder: Converts fundamentals to kernel inputs
+- Sensitivity: Grid analysis over driver variations  
+- Writer: Markdown/HTML report generation
+- Critic: Report validation and reference checking
+- Market: Multi-driver solver for target reconciliation
+- Consensus: Integrates analyst estimates and guidance
+
+### Key Design Principles
+
+**Determinism**: All numeric computation is pure NumPy. LLM usage (when enabled) uses fixed parameters: `temperature=0`, `top_p=1`, `seed=2025`.
+
+**Provenance**: Every artifact carries source URLs and content hashes. All data transformations are traceable through manifest files.
+
+**Agent Boundaries**: Only News, Writer, and Critic agents may use LLMs. All valuation math must be implemented in code, not via LLM.
+
+**Evaluation-First**: LLM-adjacent agents require eval cases under `evals/<agent>/cases/` before implementation or changes.
+
+### Data Flow
+
+1. **Input Building**: Fundamentals from EDGAR + macro data → `InputsI` (via Builder agent)
+2. **Valuation**: `InputsI` → Ginzu kernel → `ValuationV` outputs
+3. **Enhancement**: Optional consensus, market solver, comparables adjustments
+4. **Analysis**: Sensitivity analysis, driver plotting
+5. **Reporting**: Writer agents generate Markdown/HTML with embedded charts
+6. **Validation**: Critic agent validates structure and references
+
+### Configuration & Scenarios
+
+Scenarios are defined in `configs/scenarios/` with presets for baseline/cautious/aggressive assumptions. CLI supports both individual driver overrides and YAML/JSON config files with comprehensive settings including horizon, discounting mode, beta, and macro parameters.
+
+### Testing Strategy
+
+- Unit tests for kernels, connectors, and individual agents
+- Integration tests for end-to-end flows
+- Evaluation tests for LLM-adjacent components with cassettes
+- Golden canaries for regression detection using deterministic inputs
+- Quality gates enforce narrative coverage and citation requirements
+
+### Git Workflow
+
+Per AGENTS.md: No direct pushes to main. Develop on feature branches, open PRs with eval results attached, and require maintainer approval before merging. All CI checks (lint, mypy, tests, evals) must pass.
