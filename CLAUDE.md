@@ -244,3 +244,56 @@ Closes #123
 3. Push feature branch regularly: `git push -u origin feature/evaluation-framework`
 4. Create PR when feature is complete and evaluated
 5. Merge after review and all quality gates pass
+
+## LLM Integration Best Practices
+
+### Authentication Setup
+```bash
+# Required for LLM functionality
+export OPENAI_API_KEY="sk-..."           # Primary provider
+export ANTHROPIC_API_KEY="sk-ant-..."    # Premium narrative generation
+
+# Optional
+export LLM_DEBUG=true                     # Enable debug logging
+export LLM_COST_TRACKING=true           # Track usage costs
+```
+
+### Model Selection by Use Case
+- **Story/Narrative**: `story-premium` (Claude 3.5 Sonnet) - Creative investment narratives
+- **Research/Analysis**: `research-premium` (GPT-4 Turbo) - Market research, competitive analysis  
+- **Evaluation/Judging**: `judge-primary` (GPT-4) - Deterministic report evaluation
+- **Quick Tasks**: `quick-task` (GPT-4o Mini) - Summaries, quick analysis
+- **Development**: `dev-test` (GPT-3.5 Turbo) - Testing and prototyping
+
+### Usage Patterns
+```python
+# Good: Use appropriate model for task
+from investing_agent.llm.enhanced_provider import call_story_model, call_research_model
+
+# Generate investment narrative (creative)
+story = call_story_model(messages, temperature=0.3)
+
+# Analyze market trends (analytical)  
+analysis = call_research_model(messages, temperature=0.0)
+
+# Always include fallback strategies
+response = provider.call("story-premium", messages, fallback_model="story-standard")
+```
+
+### Cost Management
+- **Development**: Use `dev-test` model ($0.002/1K tokens)
+- **Production**: Select appropriate tier based on quality needs
+- **Monitoring**: Check `provider.get_usage_report()` regularly
+- **Budgets**: Set cost limits and alerts for production usage
+
+### Testing with Cassettes
+```python
+# Development: Record responses for testing
+response = provider.call("story-premium", messages, 
+                        cassette_path="cassettes/story_example.json")
+
+# CI: Use recorded responses (no live calls)  
+# Automatically loads cassette in CI environment
+```
+
+See `LLM_INTEGRATION_GUIDE.md` for detailed setup instructions and examples.

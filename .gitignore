@@ -36,8 +36,19 @@ venv/
 # OS/files
 .DS_Store
 .pypirc
+
+# Security - API keys and secrets
 .env
+.env.*
 .envrc
+*.key
+*.pem
+secrets/
+api_keys.json
+config/secrets.*
+**/*api_key*
+**/*secret*
+**/*token*
 
 # Project artifacts
 out/
