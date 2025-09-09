@@ -1,0 +1,19 @@
+{
+  "name": "synthetic_low_quality",
+  "agent": "report_quality",
+  "params": {
+    "report_path": "evals/report_quality/test_reports/synthetic_low_quality.md",
+    "cassette": "evals/report_quality/cassettes/synthetic_low_quality.json"
+  },
+  "checks": {
+    "expected_score_range": {
+      "overall": [2.0, 3.5],
+      "strategic_narrative": [1.0, 3.0],
+      "analytical_rigor": [2.0, 4.0],
+      "industry_context": [1.0, 3.0],
+      "professional_presentation": [2.0, 4.0],
+      "citation_discipline": [2.0, 4.0]
+    },
+    "max_overall_score": 3.5
+  }
+}

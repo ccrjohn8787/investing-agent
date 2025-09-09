@@ -39,7 +39,7 @@ build_i:
 	CT=$(CT) python scripts/build_inputs.py
 
 report:
-	CT=$(CT) python scripts/report.py
+	@source .venv/bin/activate && export PYTHONPATH=$(PWD):$$PYTHONPATH && CT=$(CT) python scripts/report.py
 
 supervisor:
 	CT=$(CT) python scripts/supervisor.py --html
@@ -49,3 +49,29 @@ router_demo:
 
 ui:
 	python scripts/make_index.py && echo "Open out/index.html"
+
+# Report Quality Evaluation Commands
+eval_quality:
+	@echo "Generating report and evaluating quality for $(CT)..."
+	@$(MAKE) report CT=$(CT)
+	@python scripts/eval_quality.py --ticker $(CT)
+
+eval_quality_only:
+	@echo "Evaluating quality for existing $(CT) report..."
+	@python scripts/eval_quality.py --ticker $(CT) --skip-generation
+
+eval_quality_batch:
+	@echo "Batch evaluating reports for: $(CT)"
+	@for ticker in $$(echo "$(CT)" | tr "," " "); do \
+		echo "Evaluating $$ticker..."; \
+		$(MAKE) eval_quality_only CT=$$ticker; \
+	done
+
+test_quality_evals:
+	@echo "Running all report quality evaluation tests..."
+	@pytest -q tests/evals/test_report_quality_evals.py -v
+
+# Quick report generation for eval testing
+quick_report:
+	@echo "Generating quick report for $(CT) (cached data, minimal processing)..."
+	@CT=$(CT) python scripts/report.py --quick --cache-only

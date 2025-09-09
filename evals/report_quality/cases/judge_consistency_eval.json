@@ -1,0 +1,13 @@
+{
+  "name": "judge_consistency_eval",
+  "agent": "report_quality",
+  "params": {
+    "report_path": "dbot-paper/BYD_report.md",
+    "cassette": "evals/report_quality/cassettes/judge_consistency_eval.json"
+  },
+  "checks": {
+    "consistency_test": true,
+    "score_variance_threshold": 0.1,
+    "test_aspects": ["deterministic_scoring", "repeated_evaluation"]
+  }
+}

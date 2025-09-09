@@ -1,0 +1,15 @@
+{
+  "name": "industry_context_eval",
+  "agent": "report_quality",
+  "params": {
+    "report_path": "evals/report_quality/test_reports/industry_focused.md",
+    "cassette": "evals/report_quality/cassettes/industry_context_eval.json"
+  },
+  "checks": {
+    "expected_score_range": {
+      "industry_context": [8.0, 10.0]
+    },
+    "focus_dimension": "industry_context",
+    "test_aspects": ["competitive_analysis", "market_dynamics", "regulatory_environment", "macro_factors"]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "synthetic_high_quality",
+  "agent": "report_quality",
+  "params": {
+    "report_path": "evals/report_quality/test_reports/synthetic_high_quality.md",
+    "cassette": "evals/report_quality/cassettes/synthetic_high_quality.json"
+  },
+  "checks": {
+    "expected_score_range": {
+      "overall": [8.0, 9.5],
+      "strategic_narrative": [8.0, 9.5],
+      "analytical_rigor": [8.0, 9.0],
+      "industry_context": [7.5, 9.0],
+      "professional_presentation": [8.0, 9.5],
+      "citation_discipline": [8.0, 9.5]
+    },
+    "min_overall_score": 8.0
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "overall_score": 4.1,
+  "dimensions": [
+    {
+      "name": "strategic_narrative",
+      "score": 3.5,
+      "reasoning": "UBER report provides basic financial projections but lacks compelling investment narrative. Limited strategic context about rideshare market dynamics, competitive positioning vs competitors like Lyft, or growth drivers beyond simple revenue scaling.",
+      "evidence": [
+        "Contains standard DCF table with revenue projections from $74.4B to $216.6B",
+        "Basic financial assumptions (10.77% margin, 25% growth rate)",
+        "Missing competitive analysis, market strategy, or business model evolution discussion"
+      ],
+      "improvement_suggestions": [
+        "Add rideshare market analysis and competitive positioning vs Lyft/others",
+        "Discuss autonomous vehicle strategy and impact on long-term unit economics",
+        "Include analysis of geographic expansion and regulatory environment"
+      ]
+    },
+    {
+      "name": "analytical_rigor",
+      "score": 4.2,
+      "reasoning": "Shows basic DCF methodology with standard assumptions but lacks supporting analysis for key drivers. Revenue growth assumptions (25% initial, declining to 3%) not justified with market analysis or company fundamentals.",
+      "evidence": [
+        "Standard DCF table with 10-year projections",
+        "Basic margin assumptions (10.77% stable margin)",
+        "No supporting analysis for growth rate assumptions or margin expansion rationale"
+      ],
+      "improvement_suggestions": [
+        "Justify growth assumptions with market size analysis and penetration rates",
+        "Analyze margin expansion drivers (scale economies, pricing power, cost structure)",
+        "Include scenario analysis for different market penetration outcomes"
+      ]
+    },
+    {
+      "name": "industry_context",
+      "score": 3.8,
+      "reasoning": "Minimal industry context provided. No discussion of rideshare market dynamics, regulatory challenges, or competitive landscape. Missing analysis of key industry trends like autonomous vehicles, urban mobility evolution.",
+      "evidence": [
+        "No competitive analysis vs Lyft, traditional taxi services, or emerging mobility players",
+        "Missing discussion of regulatory environment across key markets",
+        "No analysis of autonomous vehicle timeline or impact on business model"
+      ],
+      "improvement_suggestions": [
+        "Add comprehensive competitive landscape analysis",
+        "Discuss regulatory environment and potential impacts on operations",
+        "Analyze autonomous vehicle transition and timing implications"
+      ]
+    },
+    {
+      "name": "professional_presentation",
+      "score": 4.8,
+      "reasoning": "Clean, well-structured presentation with proper tables and financial formatting. Good use of computed references and provenance tracking. However, lacks visual elements that support narrative beyond basic charts.",
+      "evidence": [
+        "Clear financial tables with proper formatting",
+        "Good use of reference system [ref:computed:valuation.value_per_share]",
+        "Standard DCF bridge and sensitivity charts included"
+      ],
+      "improvement_suggestions": [
+        "Add charts showing market growth trends and competitive positioning",
+        "Include visual representation of business model evolution",
+        "Enhance narrative flow between quantitative sections"
+      ]
+    },
+    {
+      "name": "citation_discipline",
+      "score": 4.5,
+      "reasoning": "Good technical citation of computed values and provenance tracking. References fundamental data sources properly. However, lacks external market research or industry analysis citations.",
+      "evidence": [
+        "Proper computed value references throughout",
+        "Good provenance section tracking data sources",
+        "Citations section properly formatted"
+      ],
+      "improvement_suggestions": [
+        "Add citations to industry research and market analysis",
+        "Include references to competitive intelligence sources",
+        "Cite regulatory filings and management guidance"
+      ]
+    }
+  ],
+  "recommendations": [
+    "Transform from pure DCF calculation to investment thesis with rideshare market analysis",
+    "Add competitive positioning analysis vs Lyft and emerging mobility players",
+    "Include autonomous vehicle timeline analysis and business model implications",
+    "Strengthen growth assumptions with addressable market and penetration analysis",
+    "Add regulatory environment discussion across key geographic markets"
+  ],
+  "comparative_analysis": "UBER report scores slightly higher (4.1) than META baseline (3.9) due to better presentation structure and some industry-specific elements, but still falls well short of BYD benchmark quality (9.0+). Both reports are primarily numbers-focused with minimal strategic narrative or industry context.",
+  "metadata": {
+    "evaluation_date": "2025-09-09",
+    "report_type": "rideshare_technology",
+    "benchmark_comparison": "META baseline",
+    "evaluator_model": "deterministic_cassette"
+  }
+}

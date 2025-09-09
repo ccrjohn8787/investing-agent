@@ -1,0 +1,15 @@
+{
+  "name": "distressed_company_eval",
+  "agent": "report_quality",
+  "params": {
+    "report_path": "evals/report_quality/test_reports/distressed_company.md",
+    "cassette": "evals/report_quality/cassettes/distressed_company_eval.json"
+  },
+  "checks": {
+    "edge_case": "distressed_metrics",
+    "expected_score_range": {
+      "overall": [5.0, 8.0]
+    },
+    "test_aspects": ["negative_metrics", "turnaround_analysis", "risk_assessment"]
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "dimensions": {
+    "strategic_narrative": {
+      "score": 2.0,
+      "reasoning": "Poor narrative development with no clear investment thesis. Report lacks strategic storyline and reads as disconnected data presentation without coherent investment rationale or compelling business case.",
+      "evidence": [
+        "No clear investment thesis or strategic framework",
+        "Data presented without narrative context or storyline",
+        "Missing connection between company strategy and financial projections",
+        "Lacks compelling business case or investment rationale"
+      ],
+      "improvement_suggestions": [
+        "Develop clear investment thesis with supporting narrative",
+        "Create strategic storyline connecting business model to projections",
+        "Add compelling business case explaining investment opportunity",
+        "Transform data presentation into coherent investment story"
+      ]
+    },
+    "analytical_rigor": {
+      "score": 3.0,
+      "reasoning": "Basic analytical approach with minimal depth or insight. Limited use of analytical tools and superficial treatment of key investment factors. Analysis lacks sophistication expected for professional investment research.",
+      "evidence": [
+        "Basic financial calculations without deeper analysis",
+        "No sensitivity analysis or scenario planning",
+        "Limited risk assessment or alternative viewpoints",
+        "Superficial treatment of key valuation drivers"
+      ],
+      "improvement_suggestions": [
+        "Add comprehensive sensitivity and scenario analysis",
+        "Include detailed risk assessment framework",
+        "Expand analytical depth with multiple valuation approaches",
+        "Provide deeper insight beyond basic calculations"
+      ]
+    },
+    "industry_context": {
+      "score": 2.5,
+      "reasoning": "Minimal industry context with limited understanding of competitive dynamics or market factors. Company analyzed largely in isolation without appropriate sector framework or competitive positioning.",
+      "evidence": [
+        "Limited competitive landscape analysis",
+        "Missing industry trends and market dynamics",
+        "No regulatory or macro-economic context",
+        "Company evaluated without strategic industry framework"
+      ],
+      "improvement_suggestions": [
+        "Add comprehensive industry and competitive analysis",
+        "Include market dynamics and trend evaluation",
+        "Integrate regulatory environment considerations",
+        "Position company within broader industry context"
+      ]
+    },
+    "professional_presentation": {
+      "score": 3.5,
+      "reasoning": "Basic presentation with poor organization and limited visual elements. Difficult to follow structure with formatting issues that detract from analytical communication and professional credibility.",
+      "evidence": [
+        "Poor section organization and unclear structure",
+        "Limited use of visual elements or charts",
+        "Formatting inconsistencies and readability issues",
+        "Unprofessional appearance that undermines credibility"
+      ],
+      "improvement_suggestions": [
+        "Improve overall structure and section organization",
+        "Add professional visual elements and charts",
+        "Enhance formatting consistency and readability",
+        "Create professional presentation standards"
+      ]
+    },
+    "citation_discipline": {
+      "score": 3.0,
+      "reasoning": "Poor citation discipline with many unsupported claims and limited evidence integration. Lacks proper attribution and fails to meet professional standards for investment research documentation.",
+      "evidence": [
+        "Many claims lack proper supporting evidence",
+        "Limited source attribution and referencing",
+        "Poor integration of external evidence",
+        "Fails to meet professional citation standards"
+      ],
+      "improvement_suggestions": [
+        "Implement comprehensive citation system",
+        "Add proper source attribution for all claims",
+        "Integrate external evidence throughout analysis",
+        "Establish professional documentation standards"
+      ]
+    }
+  },
+  "comparative_analysis": "This report represents poor quality investment research with significant deficiencies across all dimensions. Falls well below professional standards expected for investment analysis, with particular weaknesses in strategic narrative and industry context. Requires comprehensive improvement to meet baseline professional standards.",
+  "recommendations": [
+    "Complete restructuring around clear investment thesis and narrative",
+    "Add comprehensive analytical framework with scenario planning",
+    "Integrate detailed industry and competitive context throughout",
+    "Implement professional presentation and formatting standards",
+    "Establish rigorous evidence and citation discipline"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "analytical_rigor_eval",
+  "agent": "report_quality",
+  "params": {
+    "report_path": "evals/report_quality/test_reports/analysis_focused.md",
+    "cassette": "evals/report_quality/cassettes/analytical_rigor_eval.json"
+  },
+  "checks": {
+    "expected_score_range": {
+      "analytical_rigor": [8.0, 10.0]
+    },
+    "focus_dimension": "analytical_rigor",
+    "test_aspects": ["sensitivity_analysis", "scenario_planning", "data_interpretation", "methodology"]
+  }
+}

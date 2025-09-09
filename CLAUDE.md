@@ -51,6 +51,12 @@ pip install -e .[dev]
 - Golden canary generation: `make golden PATH=<path>`
 - Golden canary check: `make golden_check`
 
+### Report Quality Evaluation
+- Generate report + evaluate quality: `make eval_quality CT=<TICKER>`
+- Evaluate existing report only: `make eval_quality_only CT=<TICKER>`
+- Batch evaluate multiple reports: `make eval_quality_batch CT="TICKER1,TICKER2,TICKER3"`
+- Run all quality evaluation tests: `make test_quality_evals`
+
 ## Architecture Overview
 
 ### Core Components
@@ -100,6 +106,141 @@ Scenarios are defined in `configs/scenarios/` with presets for baseline/cautious
 - Golden canaries for regression detection using deterministic inputs
 - Quality gates enforce narrative coverage and citation requirements
 
+## Evaluation Best Practices
+
+### When to Run Evaluations
+
+**After Major Development Milestones:**
+- ✅ **Priority completion**: Run full evaluation suite after completing any priority (P0, P1, P2, etc.)
+- ✅ **Agent changes**: Evaluate after modifying Writer, Critic, or any LLM-adjacent components
+- ✅ **Model updates**: Re-evaluate when changing LLM models or prompt engineering
+- ✅ **Architecture changes**: Evaluate after significant system architecture modifications
+
+**Regular Quality Monitoring:**
+- ✅ **Before commits**: Run `make test_quality_evals` before major commits
+- ✅ **PR validation**: Include evaluation results in pull request descriptions
+- ✅ **Release readiness**: Full evaluation suite before any production releases
+- ✅ **Regression checks**: Evaluate when debugging quality regressions
+
+### How to Run Evaluations
+
+**Development Workflow:**
+```bash
+# 1. Generate fresh report and evaluate
+make eval_quality CT=TICKER
+
+# 2. Evaluate existing report only  
+make eval_quality_only CT=TICKER
+
+# 3. Batch evaluate multiple companies
+make eval_quality_batch CT="META,BYD,AAPL,UBER"
+
+# 4. Run full test suite
+make test_quality_evals
+```
+
+**Evaluation Quality Gates:**
+- **Minimum Score**: 6.0/10 overall (reports below this fail quality gates)
+- **Dimensional Balance**: No dimension below 5.0/10
+- **Regression Prevention**: Scores must not decrease from previous versions
+- **Benchmark Tracking**: Track progress toward BYD benchmark (9.0+)
+
+### Quality Scoring Reference
+
+**Score Ranges:**
+- **9-10**: Exceptional (BYD benchmark) - Professional story-to-numbers analysis
+- **7-8**: Good - Solid professional quality with narrative depth
+- **5-6**: Acceptable - Basic professional standards, passes quality gates
+- **3-4**: Poor (META baseline) - Numbers-focused, minimal narrative
+- **0-2**: Inadequate - Fails basic quality standards
+
+**Evaluation Dimensions:**
+- Strategic Narrative (25%) - Investment thesis and storytelling quality
+- Analytical Rigor (25%) - Evidence depth and analytical methodology  
+- Industry Context (20%) - Competitive analysis and market understanding
+- Professional Presentation (15%) - Structure, flow, and readability
+- Citation Discipline (15%) - Source attribution and evidence integration
+
+### Evaluation Evolution Guidelines
+
+**Rubric Refinement:**
+- Adjust scoring criteria based on actual report analysis results
+- Add new quality dimensions as system capabilities expand
+- Calibrate thresholds using human expert validation
+
+**Test Case Expansion:**  
+- Add industry-specific evaluation cases
+- Create time-sensitive evaluation scenarios
+- Develop sector-specific quality rubrics
+
+**Judge Improvement:**
+- A/B test different LLM models and prompt strategies
+- Validate scoring accuracy against human expert assessments
+- Implement feedback loops for continuous calibration improvement
+
 ### Git Workflow
 
 Per AGENTS.md: No direct pushes to main. Develop on feature branches, open PRs with eval results attached, and require maintainer approval before merging. All CI checks (lint, mypy, tests, evals) must pass.
+
+## Git Commit and Push Best Practices
+
+### When to Commit
+
+**Commit Frequency:**
+- ✅ **Feature milestones**: After completing logical units of work
+- ✅ **Working state**: Whenever code is in a functional, testable state  
+- ✅ **Before major changes**: Create checkpoint before refactoring
+- ✅ **Daily progress**: At minimum, commit work-in-progress daily
+
+**Commit Scope:**
+- ✅ **Single purpose**: One logical change per commit
+- ✅ **Complete feature**: Don't commit half-implemented features
+- ✅ **Tested code**: Ensure commits pass basic tests before committing
+- ✅ **Clean state**: No debugging code, print statements, or temporary files
+
+### When to Push to Remote
+
+**Push Timing:**
+- ✅ **End of work session**: Push completed work before ending development sessions
+- ✅ **Feature completion**: Push after completing features or sub-tasks
+- ✅ **Collaboration needs**: Push when others need access to your changes
+- ✅ **Backup safety**: Push regularly to prevent work loss
+
+**Push Requirements:**
+- ✅ **Quality gates**: All tests and evaluations must pass
+- ✅ **Clean history**: Squash or clean up commit history before pushing
+- ✅ **Documented changes**: Include clear commit messages and documentation
+- ✅ **Branch strategy**: Push to feature branches, not directly to main
+
+### Commit Message Format
+
+```
+type(scope): brief description in imperative mood
+
+Longer explanation if needed, describing what changed and why.
+Include evaluation results for major changes.
+
+- Key change 1
+- Key change 2  
+- Key change 3
+
+Closes #123
+```
+
+**Types:** `feat`, `fix`, `docs`, `refactor`, `test`, `eval`, `perf`
+**Scopes:** `agent`, `eval`, `kernel`, `connector`, `schema`, `ui`
+
+### Branch Strategy
+
+**Branch Naming:**
+- `feature/descriptive-name` - New features
+- `fix/issue-description` - Bug fixes  
+- `eval/evaluation-improvement` - Evaluation system changes
+- `refactor/component-name` - Code restructuring
+
+**Workflow:**
+1. Create feature branch from main: `git checkout -b feature/evaluation-framework`
+2. Commit incremental progress with clear messages
+3. Push feature branch regularly: `git push -u origin feature/evaluation-framework`
+4. Create PR when feature is complete and evaluated
+5. Merge after review and all quality gates pass

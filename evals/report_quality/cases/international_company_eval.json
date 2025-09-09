@@ -1,0 +1,15 @@
+{
+  "name": "international_company_eval",
+  "agent": "report_quality",
+  "params": {
+    "report_path": "dbot-paper/BYD_report.md",
+    "cassette": "evals/report_quality/cassettes/international_company_eval.json"
+  },
+  "checks": {
+    "edge_case": "international_context",
+    "expected_score_range": {
+      "overall": [8.0, 10.0]
+    },
+    "test_aspects": ["cross_border_analysis", "currency_considerations", "regulatory_differences"]
+  }
+}

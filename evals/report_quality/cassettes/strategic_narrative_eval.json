@@ -1,0 +1,69 @@
+{
+  "dimensions": {
+    "strategic_narrative": {
+      "score": 9.0,
+      "reasoning": "Exceptional strategic narrative with compelling investment thesis, clear storyline, and excellent integration of business strategy with financial projections. Demonstrates mastery of investment storytelling techniques.",
+      "evidence": [
+        "Compelling opening hook that immediately engages readers",
+        "Clear thesis statement with supporting narrative architecture",
+        "Seamless integration of strategic context throughout analysis",
+        "Story flows logically from context through analysis to conclusions"
+      ],
+      "improvement_suggestions": [
+        "Consider adding more quantitative anchors in narrative sections",
+        "Could strengthen risk narrative integration"
+      ]
+    },
+    "analytical_rigor": {
+      "score": 7.0,
+      "reasoning": "Adequate analytical foundation supporting the narrative, though not the primary focus of this evaluation. Basic quantitative analysis present but secondary to storytelling excellence.",
+      "evidence": [
+        "Supporting financial analysis for narrative claims",
+        "Basic scenario consideration in strategic context"
+      ],
+      "improvement_suggestions": [
+        "Expand quantitative depth to match narrative excellence"
+      ]
+    },
+    "industry_context": {
+      "score": 7.5,
+      "reasoning": "Good industry context that supports the strategic narrative effectively. Industry analysis well-integrated into the storyline without overwhelming the central thesis.",
+      "evidence": [
+        "Industry trends effectively woven into narrative",
+        "Competitive positioning supports investment story"
+      ],
+      "improvement_suggestions": [
+        "Could add more detailed regulatory analysis"
+      ]
+    },
+    "professional_presentation": {
+      "score": 8.0,
+      "reasoning": "Professional presentation that enhances the strategic narrative. Good structure and formatting that supports the storytelling approach.",
+      "evidence": [
+        "Clear structure that supports narrative flow",
+        "Professional formatting enhances readability"
+      ],
+      "improvement_suggestions": [
+        "Consider adding visual elements to support story"
+      ]
+    },
+    "citation_discipline": {
+      "score": 7.5,
+      "reasoning": "Good evidence discipline that supports narrative claims appropriately. Citations integrated smoothly without disrupting story flow.",
+      "evidence": [
+        "Narrative claims properly supported with evidence",
+        "Citations integrated without disrupting flow"
+      ],
+      "improvement_suggestions": [
+        "Could add more granular source attribution"
+      ]
+    }
+  },
+  "comparative_analysis": "This report excels specifically in strategic narrative development, demonstrating how compelling investment storytelling can transform analytical content into engaging and persuasive research. The narrative dimension significantly outperforms other aspects, showing focused excellence in thesis development and story coherence.",
+  "recommendations": [
+    "Use this narrative approach as template for other reports",
+    "Balance narrative excellence with deeper quantitative analysis",
+    "Maintain story flow while expanding analytical rigor",
+    "Consider this as gold standard for strategic narrative development"
+  ]
+}

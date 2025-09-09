@@ -1,0 +1,15 @@
+{
+  "name": "technical_company_eval",
+  "agent": "report_quality",
+  "params": {
+    "report_path": "evals/report_quality/test_reports/technical_company.md",
+    "cassette": "evals/report_quality/cassettes/technical_company_eval.json"
+  },
+  "checks": {
+    "edge_case": "technical_complexity",
+    "expected_score_range": {
+      "overall": [6.0, 9.0]
+    },
+    "test_aspects": ["complex_business_model", "technical_analysis", "specialized_metrics"]
+  }
+}

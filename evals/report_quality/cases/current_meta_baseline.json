@@ -1,0 +1,19 @@
+{
+  "name": "current_meta_baseline",
+  "agent": "report_quality",
+  "params": {
+    "report_path": "out/META/report.md",
+    "cassette": "evals/report_quality/cassettes/current_meta_baseline.json"
+  },
+  "checks": {
+    "expected_score_range": {
+      "overall": [3.0, 4.5],
+      "strategic_narrative": [2.0, 4.0],
+      "analytical_rigor": [4.0, 6.0],
+      "industry_context": [1.0, 3.0],
+      "professional_presentation": [3.0, 5.0],
+      "citation_discipline": [4.0, 6.0]
+    },
+    "max_overall_score": 4.5
+  }
+}

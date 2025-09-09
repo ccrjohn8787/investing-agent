@@ -1,0 +1,15 @@
+{
+  "name": "comparative_ranking_eval",
+  "agent": "report_quality",
+  "params": {
+    "report_path_a": "dbot-paper/BYD_report.md",
+    "report_path_b": "out/META/report.md",
+    "cassette": "evals/report_quality/cassettes/comparative_ranking_eval.json"
+  },
+  "checks": {
+    "ranking_test": true,
+    "expected_ordering": "a_greater_than_b",
+    "min_score_gap": 4.0,
+    "test_aspects": ["relative_quality", "discrimination_ability"]
+  }
+}

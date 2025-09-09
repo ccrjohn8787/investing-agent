@@ -1,0 +1,17 @@
+{
+  "name": "threshold_calibration_eval",
+  "agent": "report_quality",
+  "params": {
+    "report_path": "evals/report_quality/test_reports/threshold_boundary.md",
+    "cassette": "evals/report_quality/cassettes/threshold_calibration_eval.json"
+  },
+  "checks": {
+    "threshold_test": true,
+    "score_boundaries": {
+      "high_quality": 7.5,
+      "medium_quality": 5.0,
+      "low_quality": 3.0
+    },
+    "test_aspects": ["score_boundaries", "calibration_accuracy"]
+  }
+}

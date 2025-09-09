@@ -420,7 +420,144 @@ def run_case(path: Path) -> EvalResult:
         passed = len(issues) >= need
         fails = [] if passed else ["expected LLM issues not found"]
         return EvalResult(name=case.name, passed=passed, failures=fails, details={"issues": issues})
+    if case.agent == "report_quality":
+        return run_report_quality_case(case)
     raise NotImplementedError(f"Unsupported agent for eval: {case.agent}")
+
+
+def run_report_quality_case(case: EvalCase) -> EvalResult:
+    """Run report quality evaluation case using LLM judge."""
+    from pathlib import Path as P
+    p = case.params
+    
+    # Load report content from relative path  
+    report_path = p.get("report_path")
+    if not report_path:
+        return EvalResult(
+            name=case.name, 
+            passed=False, 
+            failures=["missing report_path parameter"], 
+            details={}
+        )
+    
+    # Resolve relative path from project root
+    project_root = P(__file__).parent.parent.parent
+    full_path = project_root / report_path
+    
+    if not full_path.exists():
+        return EvalResult(
+            name=case.name,
+            passed=False, 
+            failures=[f"report file not found: {report_path}"],
+            details={"full_path": str(full_path)}
+        )
+    
+    try:
+        report_content = full_path.read_text()
+    except Exception as e:
+        return EvalResult(
+            name=case.name,
+            passed=False,
+            failures=[f"failed to read report: {e}"],
+            details={}
+        )
+    
+    # Run report quality evaluation
+    cassette_path = p.get("cassette")
+    if cassette_path:
+        # Resolve cassette path relative to project root
+        cassette_full_path = project_root / cassette_path
+        if not cassette_full_path.exists():
+            return EvalResult(
+                name=case.name,
+                passed=False,
+                failures=[f"cassette file not found: {cassette_path}"],
+                details={}
+            )
+        cassette_path = str(cassette_full_path)
+    
+    from investing_agent.evals.report_quality_judge import evaluate_report_quality
+    
+    try:
+        result = evaluate_report_quality(report_content, cassette_path)
+    except Exception as e:
+        return EvalResult(
+            name=case.name,
+            passed=False,
+            failures=[f"evaluation failed: {e}"],
+            details={}
+        )
+    
+    # Check evaluation results against expected criteria
+    failures: List[str] = []
+    checks = case.checks or {}
+    
+    # Overall score checks
+    if "min_overall_score" in checks:
+        min_score = float(checks["min_overall_score"])
+        if result.overall_score < min_score:
+            failures.append(f"overall score too low: {result.overall_score:.2f} < {min_score}")
+    
+    if "max_overall_score" in checks:
+        max_score = float(checks["max_overall_score"]) 
+        if result.overall_score > max_score:
+            failures.append(f"overall score too high: {result.overall_score:.2f} > {max_score}")
+    
+    # Expected score range checks
+    if "expected_score_range" in checks:
+        ranges = checks["expected_score_range"]
+        
+        # Check overall score range
+        if "overall" in ranges:
+            min_val, max_val = ranges["overall"]
+            if not (min_val <= result.overall_score <= max_val):
+                failures.append(f"overall score out of range: {result.overall_score:.2f} not in [{min_val}, {max_val}]")
+        
+        # Check individual dimension ranges
+        dim_map = {
+            "strategic_narrative": "Strategic Narrative Quality",
+            "analytical_rigor": "Analytical Rigor", 
+            "industry_context": "Industry Context Integration",
+            "professional_presentation": "Professional Presentation",
+            "citation_discipline": "Citation & Evidence Discipline"
+        }
+        
+        for dim_key, dim_name in dim_map.items():
+            if dim_key in ranges:
+                min_val, max_val = ranges[dim_key]
+                dim_score = None
+                for dim in result.dimensions:
+                    if dim.name == dim_name:
+                        dim_score = dim.score
+                        break
+                
+                if dim_score is not None and not (min_val <= dim_score <= max_val):
+                    failures.append(f"{dim_key} score out of range: {dim_score:.2f} not in [{min_val}, {max_val}]")
+    
+    # Comparative ranking checks for A/B testing
+    if checks.get("ranking_test") and "report_path_b" in p:
+        # For ranking tests, we'd need to evaluate both reports and compare
+        # This is a simplified implementation - full implementation would require
+        # evaluating both reports and comparing their scores
+        pass
+    
+    # Consistency checks
+    if checks.get("consistency_test"):
+        # For consistency tests, we'd need multiple evaluations of the same report
+        # This would require generating multiple cassettes or running live evaluations
+        pass
+    
+    return EvalResult(
+        name=case.name,
+        passed=len(failures) == 0,
+        failures=failures,
+        details={
+            "overall_score": result.overall_score,
+            "dimension_scores": {dim.name: dim.score for dim in result.dimensions},
+            "report_length": len(report_content),
+            "evaluation_method": "cassette" if cassette_path else "live_llm"
+        }
+    )
 
 
 def run_news_case(case: EvalCase) -> EvalResult:

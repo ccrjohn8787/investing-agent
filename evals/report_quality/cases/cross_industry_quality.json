@@ -1,0 +1,19 @@
+{
+  "name": "cross_industry_quality",
+  "agent": "report_quality",
+  "params": {
+    "report_path": "evals/report_quality/test_reports/cross_industry_tech.md", 
+    "cassette": "evals/report_quality/cassettes/cross_industry_quality.json"
+  },
+  "checks": {
+    "expected_score_range": {
+      "overall": [7.0, 8.5],
+      "strategic_narrative": [7.0, 8.5],
+      "analytical_rigor": [7.0, 8.0],
+      "industry_context": [7.5, 9.0],
+      "professional_presentation": [7.0, 8.5],
+      "citation_discipline": [6.5, 8.0]
+    },
+    "min_overall_score": 7.0
+  }
+}
