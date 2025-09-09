@@ -56,6 +56,13 @@ Reports
 - Generate full report (uses cached inputs if present): `make report CT=<TICKER>`
 - Force fresh fundamentals (bypass cache): `python scripts/report.py --fresh <TICKER>`
 - Override drivers from CLI: `python scripts/report.py <TICKER> --growth '8%,7%' --margin '12%,13%' --s2c '2.0,2.2'`
+
+Evidence-Enhanced Reports (NEW)
+- Generate evidence-enhanced report: `python scripts/report_with_evidence.py <TICKER>`
+- Disable evidence pipeline (backward compatibility): `python scripts/report_with_evidence.py <TICKER> --disable-evidence`
+- Set evidence confidence threshold: `python scripts/report_with_evidence.py <TICKER> --evidence-threshold 0.85`
+- Force new research (override frozen evidence): `python scripts/report_with_evidence.py <TICKER> --force-new-research`
+- Use evidence cassette for deterministic testing: `python scripts/report_with_evidence.py <TICKER> --evidence-cassette path/to/cassette.json`
 - Use config for advanced settings (horizon, discounting, beta, macro, stable targets, and driver paths):
   - `python scripts/report.py <TICKER> --config path/to/config.yaml` (YAML) or `.json`
   - CLI flags take precedence over config values.
@@ -96,6 +103,13 @@ Artifacts
 - Fundamentals CSV (parsed annual fields): `out/<TICKER>/fundamentals.csv`
 - Raw EDGAR companyfacts (if fetched): `out/<TICKER>/companyfacts.json`
 
+Evidence Pipeline Artifacts (NEW)
+- Evidence directory: `out/<TICKER>/evidence/`
+- Frozen evidence bundle: `out/<TICKER>/evidence/frozen_evidence_<TICKER>_<timestamp>.json`
+- Model-PR change log: `out/<TICKER>/evidence/model_pr_log_<TICKER>.json`
+- Evidence snapshots: `out/<TICKER>/evidence/snapshots/`
+- Evidence summary: included in `out/<TICKER>/report.md` when evidence pipeline is enabled
+
 Report Contents
 - Summary KPIs: value per share, equity value, PV explicit/terminal, shares.
 - Drivers & assumptions: discounting mode, tax, stable growth/margin, sales‑to‑capital, WACC, net debt/cash.
@@ -116,6 +130,12 @@ CLI Options
 - `--peers`: JSON list with peer entries; used by comparables agent.
 - `--market-target`: choose target for market solver (default `last_close`).
 - `--cap-bps`: comparables policy cap in basis points (if scenario omits it).
+
+Evidence Pipeline Options (scripts/report_with_evidence.py)
+- `--disable-evidence`: disable evidence pipeline for backward compatibility
+- `--evidence-threshold`: confidence threshold for evidence filtering (default 0.80)
+- `--force-new-research`: force new research even if frozen evidence exists
+- `--evidence-cassette`: path to evidence generation cassette for deterministic testing
 
 Caching & Offline
 - Companyfacts: caches to `out/<TICKER>/companyfacts.json` and reuses when not `--fresh`.

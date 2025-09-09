@@ -18,9 +18,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Current Major Initiative:** DBOT Quality Gap Implementation
 - **Plan Location:** `.claude/tasks/dbot_quality_gap.md` 
 - **Objective:** Transform from numbers-only reports to story-to-numbers approach matching BYD report quality
-- **Current Priority:** P0 - LLM-Based Report Evaluation Framework
-- **Architecture:** Research-once-then-freeze with evidence pipeline and Model-PR logging
+- **Current Priority:** P2 - Writer/Critic Upgrade (Read-Only + Citations)
+- **Architecture:** Research-once-then-freeze with evidence pipeline and Model-PR logging ✅
 - **Key Principles:** Evaluation-first development, strict citation discipline, deterministic reproducibility
+
+**Major Achievements:**
+- ✅ P0: LLM-Based Report Evaluation Framework with 5-dimensional scoring
+- ✅ P1: Evidence Pipeline with research-once-then-freeze architecture and Model-PR logging
 
 ## Essential Commands
 
@@ -46,10 +50,22 @@ pip install -e .[dev]
 - Generate reports with overrides: `python scripts/report.py <TICKER> --growth '8%,7%' --margin '12%,13%' --s2c '2.0,2.2'`
 - Web UI index: `make ui` (creates out/index.html)
 
+### Evidence-Enhanced Reporting (NEW)
+- Generate evidence-enhanced report: `python scripts/report_with_evidence.py <TICKER>`
+- Disable evidence pipeline: `python scripts/report_with_evidence.py <TICKER> --disable-evidence`
+- Set evidence confidence threshold: `python scripts/report_with_evidence.py <TICKER> --evidence-threshold 0.85`
+- Force new research (ignore frozen): `python scripts/report_with_evidence.py <TICKER> --force-new-research`
+- Use evidence cassette: `python scripts/report_with_evidence.py <TICKER> --evidence-cassette path/to/cassette.json`
+
 ### Evaluation & Quality Gates
 - Evaluation report: `make eval_report`
 - Golden canary generation: `make golden PATH=<path>`
 - Golden canary check: `make golden_check`
+
+### Evidence Pipeline Testing
+- Run evidence integration tests: `python -m pytest evals/evidence_pipeline/test_evidence_integration.py -v`
+- Run driver accuracy tests: `python -m pytest evals/evidence_pipeline/test_driver_accuracy.py -v`
+- Run evidence evaluation framework: `python evals/evidence_pipeline/test_evidence_integration.py`
 
 ### Report Quality Evaluation
 - Generate report + evaluate quality: `make eval_quality CT=<TICKER>`
@@ -74,6 +90,14 @@ pip install -e .[dev]
 - Critic: Report validation and reference checking
 - Market: Multi-driver solver for target reconciliation
 - Consensus: Integrates analyst estimates and guidance
+- Research Unified: Evidence-based research with 3-phase processing (NEW)
+
+**Evidence Pipeline** (`investing_agent/orchestration/`): Research-once-then-freeze architecture including:
+- Evidence Integration: Unified pipeline coordination and backward compatibility
+- Evidence Processor: Evidence ingestion engine with quality validation
+- Evidence Freezer: Immutability mechanism for research consistency  
+- PR Logger: Model-PR log system for complete audit trail
+- Snapshot Manager: Comprehensive provenance tracking system
 
 ### Key Design Principles
 
@@ -81,18 +105,40 @@ pip install -e .[dev]
 
 **Provenance**: Every artifact carries source URLs and content hashes. All data transformations are traceable through manifest files.
 
-**Agent Boundaries**: Only News, Writer, and Critic agents may use LLMs. All valuation math must be implemented in code, not via LLM.
+**Agent Boundaries**: Only Research Unified, Writer, and Critic agents may use LLMs. All valuation math must be implemented in code, not via LLM.
 
 **Evaluation-First**: LLM-adjacent agents require eval cases under `evals/<agent>/cases/` before implementation or changes.
 
+**Research-Once-Then-Freeze**: Evidence gathering occurs in a single comprehensive pass, then becomes immutable to prevent value drift and ensure reproducibility.
+
+**Complete Audit Trail**: Every evidence-based driver change is logged with full provenance chain from source URL through snapshots to final valuation impact.
+
 ### Data Flow
 
+#### Standard Pipeline
 1. **Input Building**: Fundamentals from EDGAR + macro data → `InputsI` (via Builder agent)
 2. **Valuation**: `InputsI` → Ginzu kernel → `ValuationV` outputs
 3. **Enhancement**: Optional consensus, market solver, comparables adjustments
 4. **Analysis**: Sensitivity analysis, driver plotting
 5. **Reporting**: Writer agents generate Markdown/HTML with embedded charts
 6. **Validation**: Critic agent validates structure and references
+
+#### Evidence-Enhanced Pipeline (NEW)
+1. **Input Building**: Fundamentals from EDGAR + macro data → `InputsI` (via Builder agent)
+2. **Evidence Research**: Research Unified agent → Evidence Bundle (3-phase processing)
+3. **Evidence Processing**: Evidence Processor → Driver changes with safety caps → Updated `InputsI`
+4. **Evidence Freezing**: Evidence Freezer → Immutable evidence bundle with content hash
+5. **Audit Logging**: PR Logger → Model-PR log with complete change provenance
+6. **Valuation**: Updated `InputsI` → Ginzu kernel → `ValuationV` outputs
+7. **Reporting**: Writer agents generate Markdown/HTML with evidence citations
+8. **Validation**: Critic agent validates structure, references, and evidence citations
+
+**Complete Provenance Chain:**
+```
+Source URL → Snapshot → Evidence Claims → Driver Changes → Valuation → Report
+     ↓           ↓            ↓               ↓              ↓         ↓
+Content Hash → Freeze → Model-PR Log → Audit Trail → Manifest → Citations
+```
 
 ### Configuration & Scenarios
 
