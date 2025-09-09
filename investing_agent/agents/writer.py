@@ -312,7 +312,7 @@ def render_report(
     # Optional LLM narrative merge (deterministic, cassette-based)
     if llm_output is not None:
         try:
-            md = merge_llm_sections(md, llm_output)  # type: ignore[arg-type]
+            md = merge_llm_sections(md, llm_output, inputs=I, valuation=V)  # type: ignore[arg-type]
         except Exception:
             pass
     return md
