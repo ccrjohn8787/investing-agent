@@ -26,6 +26,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ P0: LLM-Based Report Evaluation Framework with 5-dimensional scoring
 - ✅ P1: Evidence Pipeline with research-once-then-freeze architecture and Model-PR logging
 
+## CRITICAL SAFETY RULES FOR API USAGE
+
+⚠️ **NEVER run live data or call GPT API without explicit user permission**
+- **ALWAYS ASK FIRST** before running any script that calls OpenAI API
+- **DEFAULT TO GPT-4o-mini** (standard mode) for all reports unless user explicitly requests GPT-4
+- **NEVER USE GPT-4** (premium mode) unless user specifically says "use GPT-4" or "premium"
+- **COST AWARENESS**: 
+  - GPT-4o-mini: $0.0008/report (DEFAULT)
+  - GPT-4: $0.15/report (ONLY when explicitly requested)
+- **BATCH LIMITS**: Never generate more than 3 reports in a row without asking
+- **ALWAYS SHOW COST** before running: "This will cost approximately $X.XX"
+
+### Examples of proper behavior:
+- User: "Generate a report for AAPL" → Use standard mode (GPT-4o-mini) by default
+- User: "Generate a premium report for AAPL with GPT-4" → Use premium mode
+- User: "Generate reports for 10 companies" → ASK FIRST: "This will generate 10 reports at ~$0.008 total cost. Proceed?"
+
 ## Essential Commands
 
 ### Development Setup
