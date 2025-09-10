@@ -2,18 +2,20 @@
 
 ## Overview
 Professional investment research platform generating institutional-grade equity reports with:
+- **Minimalist HTML reports** (default) - Clean, readable, data-rich reports without JavaScript complexity
 - **Deterministic DCF valuation** using four key drivers: sales growth, operating margin, WACC, and sales-to-capital
+- **GPT-5 powered narratives** - Premium model (gpt-5) and standard model (gpt-5-mini) for professional analysis
 - **Evidence-based research** with frozen snapshots and complete audit trails
-- **LLM-enhanced narratives** with GPT-4o-mini (default) for cost-efficient professional reports
 - **Multi-dimensional evaluation** framework ensuring report quality (BYD benchmark standard)
-- **Interactive HTML reports** with charts, tables, and financial analysis
+- **Complete financial projections** - 10-year detailed tables with all metrics displayed
 
 ## Core Features
+- **Minimalist Report Builder**: Clean HTML reports optimized for readability and print
 - **Valuation Engine ("Ginzu")**: Pure NumPy DCF implementation with full reproducibility
 - **Evidence Pipeline**: Research-once-then-freeze architecture with Model-PR logging
 - **Professional Writer**: Story-to-numbers narrative generation matching analyst-grade quality
 - **Quality Evaluation**: 5-dimensional scoring system with LLM-as-judge capabilities
-- **Safety Controls**: API cost management with explicit confirmation requirements
+- **Sensitivity Analysis**: Comprehensive valuation matrices across growth/margin scenarios
 
 ## Quick Start
 
@@ -23,25 +25,62 @@ Professional investment research platform generating institutional-grade equity 
 python -m venv .venv && . .venv/bin/activate
 pip install -e .[dev]
 
-# Configure API keys (see API_SAFETY_SETTINGS.md)
+# Configure API keys (required for LLM features)
 cp .env.example .env
 # Edit .env to add your OPENAI_API_KEY
 ```
 
-### Generate Reports
+### Generate Reports (New Default: Minimalist HTML)
 ```bash
+# Basic report with standard model (gpt-5-mini)
+python scripts/report.py AAPL
+
+# Premium report with gpt-5 for enhanced narratives
+python scripts/report.py AAPL --premium
+
+# Report with quality evaluation
+python scripts/report.py AAPL --evaluate
+
+# Report without LLM narratives (data only)
+python scripts/report.py AAPL --disable-llm
+
+# Legacy interactive report (if needed)
+python scripts/report.py AAPL --interactive
+
 # Demo report (no API calls)
 make demo
-
-# Professional report with LLM narratives (uses GPT-4o-mini by default)
-python scripts/safe_report_generator.py AAPL
-
-# Multiple companies with cost confirmation
-python scripts/safe_report_generator.py AAPL MSFT GOOGL
-
-# Premium quality (GPT-4, only when needed)
-python scripts/safe_report_generator.py AAPL --quality premium
 ```
+
+## Report Types
+
+### Minimalist HTML Reports (Default)
+- **Clean, professional design** - No JavaScript, pure HTML/CSS
+- **Complete data transparency** - All projections and calculations visible
+- **Print-friendly** - Optimized for PDF export and printing
+- **Reliability** - No interactive components to break
+- **Full narratives** - Executive summary, financial analysis, investment thesis, risks, and conclusions
+
+### Key Report Sections
+- **Key Investment Metrics** - Current price, fair value, upside/downside, recommendation
+- **DCF Valuation Summary** - Revenue, growth, margins, WACC, enterprise value
+- **10-Year Financial Projections** - Detailed year-by-year breakdown
+- **Sensitivity Analysis** - Valuation grid across different scenarios
+- **Professional Narratives** - LLM-generated investment analysis
+- **Evidence & Citations** - Source references with confidence levels
+- **Quality Assessment** - Multi-dimensional scoring when evaluation enabled
+
+## Model Configuration
+
+### Standard Mode (Default)
+- Model: **gpt-5-mini** (currently maps to gpt-4o-mini)
+- Cost: ~$0.0008 per report
+- Use for: Regular analysis and reporting
+
+### Premium Mode
+- Model: **gpt-5** (currently maps to gpt-4)
+- Cost: ~$0.15 per report
+- Use for: High-priority analysis requiring best quality
+- Enable with: `--premium` flag
 
 ## Documentation
 - **Setup & Configuration**: See `ENV_SETUP.md` and `API_SAFETY_SETTINGS.md`
@@ -49,6 +88,7 @@ python scripts/safe_report_generator.py AAPL --quality premium
 - **Evidence Pipeline**: See `EVIDENCE_PIPELINE_GUIDE.md` for research architecture
 - **LLM Integration**: See `LLM_INTEGRATION_GUIDE.md` for model configuration
 - **Report Evaluation**: See `REPORT_QUALITY_EVALUATION_README.md` for quality framework
+- **UI Architecture**: See `docs/UI_ARCHITECTURE.md` for report generation system
 - **Troubleshooting**: See `TROUBLESHOOTING.md` for common issues
 
 ## Current Status
@@ -58,142 +98,49 @@ python scripts/safe_report_generator.py AAPL --quality premium
 - ✅ **P3**: Comparables & WACC Foundation
 - ✅ **P4-6**: Professional Report Generation System
 - ✅ **P7**: Evaluation Dashboard & Continuous Improvement
-- ✅ **Safety**: API cost controls with GPT-4o-mini default
-- 🚧 **Next**: Interactive UI for better report visualization
+- ✅ **P8**: Minimalist HTML Reports (Default)
+- ✅ **Safety**: API cost controls with gpt-5-mini default
 
-Structure
-- `investing_agent/schemas`: Typed objects for inputs, outputs, and fundamentals.
-- `investing_agent/kernels`: Valuation kernel (Ginzu) pure NumPy + public `series()` API for per‑year arrays.
-- `investing_agent/agents`: Builder (valuation), sensitivity, plotting, Markdown writer, HTML writer, critic.
-- `investing_agent/connectors`: EDGAR (US‑GAAP + IFRS fallbacks), Stooq/Yahoo (prices), UST (risk‑free).
-- `scripts`: Demo and reporting CLI with overrides/config.
-- `tests`: Unit tests for kernel, connectors, sensitivity, writers, and CLI helpers.
-- `AGENTS.md`: Rules and contracts for agent design and LLM boundaries.
+## Project Structure
+- `investing_agent/schemas`: Typed objects for inputs, outputs, and fundamentals
+- `investing_agent/kernels`: Valuation kernel (Ginzu) pure NumPy implementation
+- `investing_agent/agents`: Builder, sensitivity, plotting, writers, critic
+- `investing_agent/connectors`: EDGAR, Stooq/Yahoo (prices), UST (risk-free)
+- `investing_agent/ui`: Report builders and templates (minimalist and interactive)
+- `investing_agent/evaluation`: Quality evaluation framework
+- `scripts`: CLI tools for report generation and analysis
+- `tests`: Comprehensive test suite with quality gates
 
-Getting Started
-- Create a virtual environment and install dev deps:
-  - `python -m venv .venv && . .venv/bin/activate`
-  - `pip install -e .[dev]`
-  - Optional (for YAML configs): `pip install pyyaml`
-- Run tests: `pytest -q`
-- Evals only: `pytest -q -m eval` (quality gates)
-- Canary gate: `pytest -q -k canaries_golden`
-- Eval thresholds are configured in `evals/config.yaml` (e.g., writer.min_ref_paras=0.7). Writer evals enforce narrative coverage (≥70% paragraphs contain `[ref:...]`), critic evals flag seeded violations (missing citations, unresolved `[snap:…]`, arithmetic mismatch, naked numbers in narrative).
+## Advanced Usage
 
-Demo (no network required)
-- Generate a synthetic end-to-end report and plots:
-  - `make demo`
-  - Outputs under `./out/`: `SYN_report.md`, `SYN_sensitivity.png`, `SYN_drivers.png`
+### Evidence-Enhanced Reports
+```bash
+# Generate report with evidence pipeline
+python scripts/report_with_evidence.py AAPL
 
-Connectors (when fetching live data)
-- EDGAR requires a User‑Agent per SEC rules. Example:
-  - `export EDGAR_UA="you@example.com Investing-Agent/0.1"`
-- Prices via Stooq use CSV; no key required. Yahoo v8 used as fallback.
-- Fundamentals parsing covers common US‑GAAP tags and IFRS fallbacks (revenue, operating profit, shares, tax, D&A, capex, leases, working capital).
-- Demo is offline; reporting CLI can operate offline on cached inputs and companyfacts.
+# Set evidence confidence threshold
+python scripts/report_with_evidence.py AAPL --evidence-threshold 0.85
 
-Reports
-- Build inputs from EDGAR and cache locally: `make build_i CT=<TICKER>`
-- Generate full report (uses cached inputs if present): `make report CT=<TICKER>`
-- Force fresh fundamentals (bypass cache): `python scripts/report.py --fresh <TICKER>`
-- Override drivers from CLI: `python scripts/report.py <TICKER> --growth '8%,7%' --margin '12%,13%' --s2c '2.0,2.2'`
-
-Evidence-Enhanced Reports (NEW)
-- Generate evidence-enhanced report: `python scripts/report_with_evidence.py <TICKER>`
-- Disable evidence pipeline (backward compatibility): `python scripts/report_with_evidence.py <TICKER> --disable-evidence`
-- Set evidence confidence threshold: `python scripts/report_with_evidence.py <TICKER> --evidence-threshold 0.85`
-- Force new research (override frozen evidence): `python scripts/report_with_evidence.py <TICKER> --force-new-research`
-- Use evidence cassette for deterministic testing: `python scripts/report_with_evidence.py <TICKER> --evidence-cassette path/to/cassette.json`
-- Use config for advanced settings (horizon, discounting, beta, macro, stable targets, and driver paths):
-  - `python scripts/report.py <TICKER> --config path/to/config.yaml` (YAML) or `.json`
-  - CLI flags take precedence over config values.
-- Export HTML (single‑file) alongside Markdown: add `--html`.
-- Scenario presets: `--scenario baseline|cautious|aggressive` (loads from `configs/scenarios/`).
-- Apply consensus (near-term revenue/EBIT): `--consensus path/to/consensus.json`.
-- LLM writer (cassette): `--writer llm --writer-llm-cassette evals/writer_llm/cassettes/sample_output.json`
-  - Insights (cassette): `--insights evals/research/cassettes/insights_sample.json`
-  - Optional LLM critic (cassette via supervisor): `--critic-llm-cassette evals/critic_llm/cassettes/sample_critique.json` with scenario `router.enable_llm_critic: true`.
-  - Live LLM (opt-in; no CI): `--llm-live --llm-model gpt-4.1-mini --llm-cassette-out out/<TICKER>/cassettes/writer.jsonl` (records for replay).
-
-Insights via Research Summarizer (cassette)
-- Generate from cached filings (offline): `--insights-llm-cassette evals/research_llm/cassettes/sample_insights.json`
-- Live (non-CI): `--insights-llm-live --insights-llm-cassette-out out/<TICKER>/cassettes/insights.jsonl`
-
-Backtesting Quick Start
-- Plan JSON/YAML with jobs: `python scripts/backtest.py tests/fixtures/backtest/plan.json`
-- Outputs: `out/_backtests/<RUN_ID>/per_ticker.csv` and `summary.csv` (MAD, MAPE, median_abs_err, count).
-
-Web UI
-- Generate static index: `make ui` — writes `out/index.html` listing artifacts by ticker.
-
-Consensus Smoothing (via scenario or direct consensus_data)
-- consensus.smoothing: `{ mode: slope|half_life, slope_bps_per_year?: number, half_life_years?: number }`
-- consensus.bounds: `{ growth: [min,max], margin: [min,max] }`
-- Defaults: `mode="slope"`, `slope_bps_per_year=50 (0.005)`, `half_life_years=2.0`.
-- Apply comparables (peer list): `--peers path/to/peers.json` (cap via scenario `comparables.cap_bps` or `--cap-bps`).
-- Market solver target: `--market-target last_close|none` when scenario enables market.
-- Include News: `--news` to fetch recent RSS and propose impacts.
-  - `--news-window <days>` to set recency window (default 14)
-  - `--news-sources <url1,url2>` to override default feeds
-  - `--news-llm-cassette <path>` to summarize via deterministic cassette
-
-Artifacts
-- Markdown: `out/<TICKER>/report.md`
-- HTML (if `--html`): `out/<TICKER>/report.html`
-- Series CSV (per‑year revenue/EBIT/FCFF/WACC/DF/PV): `out/<TICKER>/series.csv`
-- Fundamentals CSV (parsed annual fields): `out/<TICKER>/fundamentals.csv`
-- Raw EDGAR companyfacts (if fetched): `out/<TICKER>/companyfacts.json`
-
-Evidence Pipeline Artifacts (NEW)
-- Evidence directory: `out/<TICKER>/evidence/`
-- Frozen evidence bundle: `out/<TICKER>/evidence/frozen_evidence_<TICKER>_<timestamp>.json`
-- Model-PR change log: `out/<TICKER>/evidence/model_pr_log_<TICKER>.json`
-- Evidence snapshots: `out/<TICKER>/evidence/snapshots/`
-- Evidence summary: included in `out/<TICKER>/report.md` when evidence pipeline is enabled
-
-Report Contents
-- Summary KPIs: value per share, equity value, PV explicit/terminal, shares.
-- Drivers & assumptions: discounting mode, tax, stable growth/margin, sales‑to‑capital, WACC, net debt/cash.
-- Per‑year detail: revenue, growth, margin, sales‑to‑capital, ROIC, reinvestment, FCFF, WACC, discount factor, PV(FCFF).
-- Terminal value: FCFF(T+1), r−g, TV@T, DF@T, PV(TV).
-- Fundamentals (parsed): annual revenue/EBIT table, TTM revenue/EBIT, shares, tax, D&A, capex, lease assets/liabilities, working capital.
-- HTML only: embedded charts (sensitivity, drivers, PV bridge, price vs value) and collapsible raw companyfacts JSON (for transparency).
-- Summary bullets include inline reference tokens like `[ref:computed:valuation.value_per_share;table:Per-Year Detail;snap:<sha>]`; Critic validates these against present sections and snapshot hashes.
-- Citations: if provenance exists and no citations are passed, a minimal Citations section is auto-added.
-
-CLI Options
-- `--growth`, `--margin`, `--s2c`: comma‑separated paths; accepts percents (`"8%"`) or decimals (`0.08`).
-- `--config`: JSON or YAML file with any of: `growth`, `margin`, `s2c`, `horizon`, `discounting` (`end|midyear`), `beta`, `stable_growth`, `stable_margin`, `macro` (`risk_free_curve`, `erp`, `country_risk`).
-- `--fresh`: bypass caches and refetch companyfacts and macro.
-- `--html`: write a single‑file HTML report alongside Markdown and CSVs.
-- `--scenario`: load a scenario by name or path; see `docs/SCENARIOS.md`.
-- `--consensus`: JSON file with `revenue` and `ebit` arrays; maps to first two years.
-- `--peers`: JSON list with peer entries; used by comparables agent.
-- `--market-target`: choose target for market solver (default `last_close`).
-- `--cap-bps`: comparables policy cap in basis points (if scenario omits it).
-
-Evidence Pipeline Options (scripts/report_with_evidence.py)
-- `--disable-evidence`: disable evidence pipeline for backward compatibility
-- `--evidence-threshold`: confidence threshold for evidence filtering (default 0.80)
-- `--force-new-research`: force new research even if frozen evidence exists
-- `--evidence-cassette`: path to evidence generation cassette for deterministic testing
-
-Caching & Offline
-- Companyfacts: caches to `out/<TICKER>/companyfacts.json` and reuses when not `--fresh`.
-- UST yields: caches to `out/<TICKER>/ust.csv` and reuses when network unavailable.
-- Prices: falls back to local `out/<TICKER>/prices.csv` (Stooq format) when offline.
-- All fallbacks are logged in `manifest.json` snapshots for audit.
-
-Golden Canaries
-- Use deterministic, seeded `InputsI` to detect regressions via artifact hashes.
-- See `docs/CANARIES.md`. Quick start:
-  - Place `canaries/SYN/inputs.json` (or other ticker folder)
-  - Generate goldens: `python scripts/write_canary.py canaries/SYN`
-  - Run acceptance: `pytest -q -k canaries_golden`
-
-Example `config.yaml`
+# Force new research (override frozen evidence)
+python scripts/report_with_evidence.py AAPL --force-new-research
 ```
-horizon: 12
+
+### Valuation Overrides
+```bash
+# Override growth rates
+python scripts/report.py AAPL --growth '8%,7%,6%'
+
+# Override operating margins
+python scripts/report.py AAPL --margin '12%,13%,14%'
+
+# Override sales-to-capital
+python scripts/report.py AAPL --s2c '2.0,2.2,2.4'
+```
+
+### Configuration Files
+```yaml
+# config.yaml
+horizon: 10
 discounting: midyear
 beta: 1.1
 stable_growth: 0.025
@@ -207,17 +154,76 @@ macro:
   country_risk: 0.0
 ```
 
-Notes & Limits
-- IFRS coverage is pragmatic; tag coverage expands as needed.
-- WACC path = rf + (ERP + country risk) × beta; leverage/tax shield modeling is minimal in MVP.
-- EDGAR rate limits apply; set `EDGAR_UA` and be respectful with fetches.
-Batch Runs
-- Define jobs and optional default scenario in a plan file (YAML/JSON):
+Use with: `python scripts/report.py AAPL --config config.yaml`
+
+## Testing
+
+### Run Tests
+```bash
+# All tests
+pytest -q
+
+# Evaluation tests only
+pytest -q -m eval
+
+# Acceptance tests
+pytest -q tests/acceptance
+
+# Golden canary tests
+pytest -q -k canaries_golden
 ```
-scenario: baseline
-jobs:
-  - { ticker: META, html: true }
-  - { ticker: AAPL, scenario: cautious }
+
+### Quality Gates
+- Minimum overall score: 6.0/10
+- Dimensional requirements: No dimension below 5.0/10
+- Citation density: ≥70% of paragraphs must contain references
+- Numeric accuracy: All calculations must match kernel outputs
+
+## Report Artifacts
+
+### Output Directory Structure
 ```
-- Dry run: `python scripts/run_batch.py path/to/plan.yaml`
-- Execute: `python scripts/run_batch.py path/to/plan.yaml --run`
+out/
+└── TICKER/
+    ├── TICKER_report.html         # Main minimalist HTML report
+    ├── report_data.json           # Report data and narratives
+    ├── TICKER_evaluation.json     # Quality evaluation scores
+    ├── series.csv                 # Per-year financial projections
+    ├── fundamentals.csv           # Parsed annual financials
+    ├── companyfacts.json          # Raw EDGAR data
+    └── evidence/                  # Evidence pipeline artifacts
+        ├── frozen_evidence_*.json
+        ├── model_pr_log_*.json
+        └── snapshots/
+```
+
+## API Safety
+
+**IMPORTANT**: Always requires explicit permission before API calls
+- Default model: gpt-5-mini (cost: ~$0.0008/report)
+- Premium model: gpt-5 (cost: ~$0.15/report)
+- Never generate more than 3 reports without confirmation
+- See `API_SAFETY_SETTINGS.md` for detailed guidelines
+
+## Contributing
+
+1. Follow the agent design principles in `AGENTS.md`
+2. Ensure all changes pass quality gates: `make ci`
+3. Update documentation for new features
+4. Add tests for new functionality
+5. Use the evaluation framework to validate report quality
+
+## License
+
+Proprietary - See LICENSE file for details
+
+## Support
+
+For issues and questions:
+- GitHub Issues: https://github.com/anthropics/claude-code/issues
+- Documentation: See docs/ directory
+- Troubleshooting: See TROUBLESHOOTING.md
+
+---
+
+*Built with a focus on reliability, transparency, and professional-grade investment analysis.*
