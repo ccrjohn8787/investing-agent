@@ -709,3 +709,60 @@ Manifest → Citations → Audit Trail → Validation → Report → Evaluation
 7. **Continuous Improvement (P7):** Systematic enhancement and monitoring system
 
 This plan transforms the current system from numbers-focused to professional-grade story-to-numbers analysis while maintaining scientific rigor, deterministic reproducibility, and complete auditability.
+
+## Priority 8: Interactive UI for Professional Reports (IN PROGRESS)
+
+### Design Architecture (APPROVED)
+- **Approach**: Enhanced static HTML with progressive enhancement
+- **Technology**: Vanilla JavaScript + CSS Grid + Chart.js
+- **Key Principle**: Separation of UI layer from data/logic layer
+
+### Implementation Plan
+
+#### Phase 1: Core Structure (Week 1)
+- [ ] Create new HTML template with semantic structure
+- [ ] Implement CSS Grid layout system  
+- [ ] Add navigation sidebar with sections
+- [ ] Create responsive breakpoints
+- [ ] Document UI/data layer separation in `docs/UI_ARCHITECTURE.md`
+
+#### Phase 2: Data Visualization (Week 2)
+- [ ] Replace static PNGs with Chart.js
+- [ ] Add interactive tables with sorting
+- [ ] Implement metric cards dashboard
+- [ ] Create sensitivity heatmap component
+- [ ] Add evaluation score display widget
+
+#### Phase 3: Interactivity (Week 3)
+- [ ] Add DCF model playground with editable assumptions
+- [ ] Implement scenario comparison
+- [ ] Create search functionality
+- [ ] Add export capabilities (PDF, Excel, JSON)
+- [ ] Integrate evidence viewer with citations
+
+#### Phase 4: Polish & Testing (Week 4)
+- [ ] Add dark mode support
+- [ ] Optimize performance
+- [ ] Test across browsers
+- [ ] Create print stylesheets
+- [ ] Add evaluation score history visualization
+
+### Key Design Features
+- **Executive Dashboard**: Key metrics cards at top
+- **Interactive DCF**: Editable assumptions with real-time recalculation
+- **Evaluation Display**: Score badge with dimensional breakdown
+- **Evidence Integration**: Inline citations with hover previews
+- **Export Options**: Multiple format support
+
+### File Structure
+```
+investing_agent/
+├── ui/
+│   ├── templates/
+│   │   └── report.html
+│   ├── static/
+│   │   ├── css/
+│   │   └── js/
+│   └── builders/
+│       └── html_report_builder.py
+```

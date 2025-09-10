@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{company}} ({{ticker}}) - Investment Report</title>
+    
+    <!-- Embedded CSS -->
+    <style>
+        /* CSS Variables for theming */
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-color: #ffffff;
+            --text-color: #1f2937;
+            --border-color: #e5e7eb;
+            --card-bg: #f9fafb;
+            --sidebar-bg: #f3f4f6;
+            --header-height: 160px;
+            --sidebar-width: 280px;
+        }
+
+        /* Dark mode */
+        [data-theme="dark"] {
+            --bg-color: #111827;
+            --text-color: #f3f4f6;
+            --border-color: #374151;
+            --card-bg: #1f2937;
+            --sidebar-bg: #1f2937;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-height);
+            background: var(--bg-color);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 100;
+            padding: 1rem 2rem;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            height: 100%;
+        }
+
+        .company-info {
+            flex: 1;
+        }
+
+        .company-name {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .ticker-symbol {
+            font-size: 1.25rem;
+            color: var(--text-color);
+            opacity: 0.8;
+        }
+
+        /* Key Metrics Bar */
+        .metrics-bar {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            margin-top: 0.75rem;
+            position: relative;
+            z-index: 1;
+            padding-bottom: 0.5rem;
+        }
+
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            opacity: 0.6;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .metric-value.positive {
+            color: var(--success-color);
+        }
+
+        .metric-value.negative {
+            color: var(--danger-color);
+        }
+
+        /* Evaluation Score Badge */
+        .evaluation-badge {
+            position: relative;
+            padding: 1rem 1.5rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .evaluation-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .score-display {
+            text-align: center;
+        }
+
+        .score-number {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .score-label {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        .score-excellent { color: #10b981; }
+        .score-good { color: #3b82f6; }
+        .score-fair { color: #f59e0b; }
+        .score-poor { color: #ef4444; }
+
+        /* Header Actions */
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            color: var(--text-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--card-bg);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-color);
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            margin-top: var(--header-height);
+            min-height: calc(100vh - var(--header-height));
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: var(--header-height);
+            bottom: 0;
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 1.5rem 0;
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-title {
+            padding: 0.5rem 1.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.6;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1.5rem;
+            color: var(--text-color);
+            text-decoration: none;
+            transition: background 0.2s;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        .nav-item:hover {
+            background: var(--card-bg);
+        }
+
+        .nav-item.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+            max-width: 1400px;
+        }
+
+        /* Section */
+        .section {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-header {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        .section-subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .metric-card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-card-label {
+            font-size: 0.875rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-card-change {
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .data-table th {
+            background: var(--sidebar-bg);
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--border-color);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .data-table th:hover {
+            background: var(--card-bg);
+        }
+
+        .data-table th.sortable:after {
+            content: ' ↕';
+            opacity: 0.4;
+            font-size: 0.75rem;
+        }
+
+        .data-table th.sorted-asc:after {
+            content: ' ↑';
+            opacity: 1;
+        }
+
+        .data-table th.sorted-desc:after {
+            content: ' ↓';
+            opacity: 1;
+        }
+
+        .data-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table tr:hover {
+            background: var(--card-bg);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 1rem;
+        }
+
+        /* DCF Playground */
+        .dcf-playground {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+
+        .assumptions-panel {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .assumption-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .assumption-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .assumption-value {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            border: none;
+        }
+
+        .valuation-output {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .valuation-result {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            margin-bottom: 1.5rem;
+        }
+
+        .valuation-result-value {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .valuation-result-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        /* Evidence Cards */
+        .evidence-card {
+            background: var(--card-bg);
+            border-left: 4px solid var(--primary-color);
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+        }
+
+        .evidence-quote {
+            font-style: italic;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+            opacity: 0.9;
+        }
+
+        .evidence-source {
+            font-size: 0.875rem;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .evidence-source:hover {
+            text-decoration: underline;
+        }
+
+        .evidence-confidence {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .confidence-high {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .confidence-medium {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .confidence-low {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        /* Score Breakdown Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-color);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-color);
+            opacity: 0.6;
+        }
+
+        .modal-close:hover {
+            opacity: 1;
+        }
+
+        .score-dimension {
+            margin-bottom: 1.5rem;
+        }
+
+        .dimension-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .dimension-name {
+            font-weight: 500;
+        }
+
+        .dimension-score {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .dimension-bar {
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .dimension-fill {
+            height: 100%;
+            background: var(--primary-color);
+            transition: width 0.5s ease;
+        }
+
+        .dimension-description {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .dcf-playground {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .header-content {
+                flex-direction: column;
+            }
+
+            .metrics-bar {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+
+            .header-actions {
+                margin-top: 1rem;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            .sidebar,
+            .header-actions,
+            .btn {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .section {
+                display: block !important;
+                page-break-after: always;
+            }
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="company-info">
+                <h1 class="company-name">{{company}}</h1>
+                <div class="ticker-symbol">{{ticker}}</div>
+                <div class="metrics-bar">
+                    <div class="metric-item">
+                        <span class="metric-label">Fair Value</span>
+                        <span class="metric-value">${{fair_value}}</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Current Price</span>
+                        <span class="metric-value">${{current_price}}</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Upside</span>
+                        <span class="metric-value {{upside_class}}">{{upside}}%</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Rating</span>
+                        <span class="metric-value">{{rating}}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="evaluation-badge" onclick="showScoreDetails()">
+                <div class="score-display">
+                    <div class="score-number {{score_class}}">{{overall_score}}</div>
+                    <div class="score-label">Report Quality Score</div>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button class="btn" onclick="toggleTheme()">🌙</button>
+                <button class="btn" onclick="exportExcel()">📊 Excel</button>
+                <button class="btn btn-primary" onclick="shareReport()">Share</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Layout Container -->
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="nav-section">
+                <div class="nav-title">Overview</div>
+                <button class="nav-item active" onclick="showSection('executive-summary')">Executive Summary</button>
+                <button class="nav-item" onclick="showSection('key-metrics')">Key Metrics</button>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">Valuation</div>
+                <button class="nav-item" onclick="showSection('dcf-model')">DCF Model</button>
+                <button class="nav-item" onclick="showSection('sensitivity')">Sensitivity Analysis</button>
+                <button class="nav-item" onclick="showSection('scenarios')">Scenarios</button>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">Analysis</div>
+                <button class="nav-item" onclick="showSection('financial-analysis')">Financial Analysis</button>
+                <button class="nav-item" onclick="showSection('investment-thesis')">Investment Thesis</button>
+                <button class="nav-item" onclick="showSection('risks')">Risk Analysis</button>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">Evidence</div>
+                <button class="nav-item" onclick="showSection('evidence')">Research & Citations</button>
+                <button class="nav-item" onclick="showSection('news')">Recent News</button>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">Technical</div>
+                <button class="nav-item" onclick="showSection('projections')">Projections Table</button>
+                <button class="nav-item" onclick="showSection('provenance')">Data Provenance</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Executive Summary Section -->
+            <section id="executive-summary" class="section active">
+                <div class="section-header">
+                    <h2 class="section-title">Executive Summary</h2>
+                    <p class="section-subtitle">Investment overview and key highlights</p>
+                </div>
+                
+                <div class="card">
+                    <div id="executive-content">{{executive_summary}}</div>
+                </div>
+            </section>
+
+            <!-- Key Metrics Section -->
+            <section id="key-metrics" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Key Metrics</h2>
+                    <p class="section-subtitle">Financial performance indicators</p>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-card-value">${{revenue}}B</div>
+                        <div class="metric-card-label">Revenue</div>
+                        <div class="metric-card-change positive">+{{revenue_growth}}% YoY</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-value">{{operating_margin}}%</div>
+                        <div class="metric-card-label">Operating Margin</div>
+                        <div class="metric-card-change">{{margin_trend}}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-value">{{wacc}}%</div>
+                        <div class="metric-card-label">WACC</div>
+                        <div class="metric-card-change">Cost of Capital</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-value">{{roic}}%</div>
+                        <div class="metric-card-label">ROIC</div>
+                        <div class="metric-card-change">Return on Capital</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">Revenue & Profitability Trends</h3>
+                    <div class="chart-container">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- DCF Model Section -->
+            <section id="dcf-model" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">DCF Model Playground</h2>
+                    <p class="section-subtitle">Interactive valuation model - adjust assumptions to see impact</p>
+                </div>
+                
+                <div class="dcf-playground">
+                    <div class="assumptions-panel">
+                        <h3>Assumptions</h3>
+                        
+                        <div class="assumption-group">
+                            <div class="assumption-label">
+                                <span>Revenue Growth</span>
+                                <span class="assumption-value" id="growth-value">{{default_growth}}%</span>
+                            </div>
+                            <input type="range" class="slider" id="growth-slider" 
+                                   min="0" max="30" step="0.5" value="{{default_growth}}"
+                                   oninput="updateDCF()">
+                        </div>
+                        
+                        <div class="assumption-group">
+                            <div class="assumption-label">
+                                <span>Operating Margin</span>
+                                <span class="assumption-value" id="margin-value">{{default_margin}}%</span>
+                            </div>
+                            <input type="range" class="slider" id="margin-slider"
+                                   min="5" max="50" step="0.5" value="{{default_margin}}"
+                                   oninput="updateDCF()">
+                        </div>
+                        
+                        <div class="assumption-group">
+                            <div class="assumption-label">
+                                <span>WACC</span>
+                                <span class="assumption-value" id="wacc-value">{{default_wacc}}%</span>
+                            </div>
+                            <input type="range" class="slider" id="wacc-slider"
+                                   min="5" max="15" step="0.1" value="{{default_wacc}}"
+                                   oninput="updateDCF()">
+                        </div>
+                        
+                        <div class="assumption-group">
+                            <div class="assumption-label">
+                                <span>Terminal Growth</span>
+                                <span class="assumption-value" id="terminal-value">{{default_terminal}}%</span>
+                            </div>
+                            <input type="range" class="slider" id="terminal-slider"
+                                   min="0" max="5" step="0.1" value="{{default_terminal}}"
+                                   oninput="updateDCF()">
+                        </div>
+                        
+                        <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" 
+                                onclick="resetAssumptions()">Reset to Base Case</button>
+                    </div>
+                    
+                    <div class="valuation-output">
+                        <div class="valuation-result">
+                            <div class="valuation-result-value" id="dcf-value">${{fair_value}}</div>
+                            <div class="valuation-result-label">Fair Value per Share</div>
+                        </div>
+                        
+                        <div class="card">
+                            <h4>Valuation Bridge</h4>
+                            <canvas id="waterfallChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sensitivity Analysis Section -->
+            <section id="sensitivity" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Sensitivity Analysis</h2>
+                    <p class="section-subtitle">Impact of key assumptions on valuation</p>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">Two-Way Sensitivity: Growth vs Margin</h3>
+                    <div class="chart-container">
+                        <canvas id="heatmapChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Financial Analysis Section -->
+            <section id="financial-analysis" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Financial Analysis</h2>
+                    <p class="section-subtitle">Detailed financial performance review</p>
+                </div>
+                
+                <div class="card">
+                    <div id="financial-content">{{financial_analysis}}</div>
+                </div>
+            </section>
+
+            <!-- Investment Thesis Section -->
+            <section id="investment-thesis" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Investment Thesis</h2>
+                    <p class="section-subtitle">Core investment rationale</p>
+                </div>
+                
+                <div class="card">
+                    <div id="thesis-content">{{investment_thesis}}</div>
+                </div>
+            </section>
+
+            <!-- Risk Analysis Section -->
+            <section id="risks" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Risk Analysis</h2>
+                    <p class="section-subtitle">Key risks and mitigation factors</p>
+                </div>
+                
+                <div class="card">
+                    <div id="risk-content">{{risk_analysis}}</div>
+                </div>
+            </section>
+
+            <!-- Evidence Section -->
+            <section id="evidence" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Research & Citations</h2>
+                    <p class="section-subtitle">Evidence supporting our analysis</p>
+                </div>
+                
+                <div id="evidence-cards">
+                    <!-- Evidence cards will be inserted here -->
+                </div>
+            </section>
+
+            <!-- Scenarios Section -->
+            <section id="dcf-scenarios" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Scenario Analysis</h2>
+                    <p class="section-subtitle">Bull, base, and bear case valuations</p>
+                </div>
+                
+                <div class="card">
+                    <div class="scenarios-grid">
+                        <div class="scenario-card">
+                            <h4 class="scenario-title">Bear Case</h4>
+                            <div class="scenario-value">${{bear_value}}</div>
+                            <div class="scenario-assumptions">
+                                <p>Growth: {{bear_growth}}%</p>
+                                <p>Margin: {{bear_margin}}%</p>
+                            </div>
+                        </div>
+                        <div class="scenario-card scenario-base">
+                            <h4 class="scenario-title">Base Case</h4>
+                            <div class="scenario-value">${{fair_value}}</div>
+                            <div class="scenario-assumptions">
+                                <p>Growth: {{default_growth}}%</p>
+                                <p>Margin: {{default_margin}}%</p>
+                            </div>
+                        </div>
+                        <div class="scenario-card">
+                            <h4 class="scenario-title">Bull Case</h4>
+                            <div class="scenario-value">${{bull_value}}</div>
+                            <div class="scenario-assumptions">
+                                <p>Growth: {{bull_growth}}%</p>
+                                <p>Margin: {{bull_margin}}%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Recent News Section -->
+            <section id="news" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Recent News & Updates</h2>
+                    <p class="section-subtitle">Latest developments and market news</p>
+                </div>
+                
+                <div id="news-container" class="news-grid">
+                    <!-- News items will be populated by JavaScript -->
+                </div>
+            </section>
+            
+            <!-- Projections Table Section -->
+            <section id="projections" class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Detailed Projections</h2>
+                    <p class="section-subtitle">Year-by-year financial projections</p>
+                </div>
+                
+                <div class="card">
+                    <table class="data-table" id="projections-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortTable('projections-table', 0)">Year</th>
+                                <th class="sortable" onclick="sortTable('projections-table', 1)">Revenue</th>
+                                <th class="sortable" onclick="sortTable('projections-table', 2)">Growth</th>
+                                <th class="sortable" onclick="sortTable('projections-table', 3)">Margin</th>
+                                <th class="sortable" onclick="sortTable('projections-table', 4)">FCFF</th>
+                                <th class="sortable" onclick="sortTable('projections-table', 5)">PV(FCFF)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projections-body">
+                            <!-- Table rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Score Details Modal -->
+    <div class="modal" id="scoreModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Report Quality Score Breakdown</h3>
+                <button class="modal-close" onclick="closeScoreDetails()">×</button>
+            </div>
+            
+            <div class="score-dimension">
+                <div class="dimension-header">
+                    <span class="dimension-name">Strategic Narrative</span>
+                    <span class="dimension-score">{{narrative_score}}/10</span>
+                </div>
+                <div class="dimension-bar">
+                    <div class="dimension-fill" style="width: {{narrative_pct}}%"></div>
+                </div>
+                <div class="dimension-description">Quality of investment thesis and storytelling</div>
+            </div>
+            
+            <div class="score-dimension">
+                <div class="dimension-header">
+                    <span class="dimension-name">Analytical Rigor</span>
+                    <span class="dimension-score">{{analytical_score}}/10</span>
+                </div>
+                <div class="dimension-bar">
+                    <div class="dimension-fill" style="width: {{analytical_pct}}%"></div>
+                </div>
+                <div class="dimension-description">Depth of financial analysis and methodology</div>
+            </div>
+            
+            <div class="score-dimension">
+                <div class="dimension-header">
+                    <span class="dimension-name">Industry Context</span>
+                    <span class="dimension-score">{{industry_score}}/10</span>
+                </div>
+                <div class="dimension-bar">
+                    <div class="dimension-fill" style="width: {{industry_pct}}%"></div>
+                </div>
+                <div class="dimension-description">Competitive analysis and market understanding</div>
+            </div>
+            
+            <div class="score-dimension">
+                <div class="dimension-header">
+                    <span class="dimension-name">Professional Presentation</span>
+                    <span class="dimension-score">{{presentation_score}}/10</span>
+                </div>
+                <div class="dimension-bar">
+                    <div class="dimension-fill" style="width: {{presentation_pct}}%"></div>
+                </div>
+                <div class="dimension-description">Structure, clarity, and readability</div>
+            </div>
+            
+            <div class="score-dimension">
+                <div class="dimension-header">
+                    <span class="dimension-name">Citation Discipline</span>
+                    <span class="dimension-score">{{citation_score}}/10</span>
+                </div>
+                <div class="dimension-bar">
+                    <div class="dimension-fill" style="width: {{citation_pct}}%"></div>
+                </div>
+                <div class="dimension-description">Evidence integration and source attribution</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Embedded JavaScript -->
+    <script>
+        // Report data embedded from Python
+        window.reportData = {{json_data}};
+        
+        // Navigation
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Initialize charts if needed
+            if (sectionId === 'key-metrics' && !window.revenueChartInitialized) {
+                setTimeout(() => {
+                    if (window.initRevenueChart && window.reportData) {
+                        // Prepare revenue chart data
+                        const chartData = {
+                            years: window.reportData.charts?.years || ['Y1', 'Y2', 'Y3', 'Y4', 'Y5'],
+                            revenue: window.reportData.charts?.revenue || [100, 110, 120, 130, 140],
+                            margin: window.reportData.charts?.margin || [30, 31, 32, 33, 34]
+                        };
+                        window.initRevenueChart(chartData);
+                        window.revenueChartInitialized = true;
+                    }
+                }, 100);
+            } else if (sectionId === 'dcf-model' && !window.waterfallChartInitialized) {
+                setTimeout(() => {
+                    if (window.initWaterfallChart && window.reportData) {
+                        // Prepare waterfall chart data
+                        const waterfallData = {
+                            baseValue: window.reportData.current_price || 100,
+                            changes: [10, 15, -5, 8],
+                            labels: ['Current', 'Growth', 'Margin', 'WACC', 'Terminal', 'Fair Value']
+                        };
+                        window.initWaterfallChart(waterfallData);
+                        window.waterfallChartInitialized = true;
+                    }
+                }, 100);
+            } else if (sectionId === 'sensitivity' && !window.heatmapInitialized) {
+                setTimeout(() => {
+                    if (window.initHeatmap && window.reportData) {
+                        // Prepare heatmap data
+                        const heatmapData = {
+                            growthRates: [-5, 0, 5, 10, 15],
+                            margins: [25, 30, 35, 40, 45],
+                            values: [[150, 160, 170, 180, 190],
+                                    [160, 170, 180, 190, 200],
+                                    [170, 180, window.reportData.valuation.fair_value || 190, 200, 210],
+                                    [180, 190, 200, 210, 220],
+                                    [190, 200, 210, 220, 230]]
+                        };
+                        window.initHeatmap(heatmapData);
+                        window.heatmapInitialized = true;
+                    }
+                }, 100);
+            }
+        }
+        
+        // Theme Toggle
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.body.setAttribute('data-theme', savedTheme);
+        
+        // DCF Model Updates
+        function updateDCF() {
+            const growth = document.getElementById('growth-slider').value;
+            const margin = document.getElementById('margin-slider').value;
+            const wacc = document.getElementById('wacc-slider').value;
+            const terminal = document.getElementById('terminal-slider').value;
+            
+            // Update display values
+            document.getElementById('growth-value').textContent = growth + '%';
+            document.getElementById('margin-value').textContent = margin + '%';
+            document.getElementById('wacc-value').textContent = wacc + '%';
+            document.getElementById('terminal-value').textContent = terminal + '%';
+            
+            // Calculate new DCF value (simplified calculation)
+            const baseValue = reportData.valuation.fair_value;
+            const growthImpact = (growth - reportData.assumptions.growth) * 2;
+            const marginImpact = (margin - reportData.assumptions.margin) * 3;
+            const waccImpact = (reportData.assumptions.wacc - wacc) * 10;
+            
+            const newValue = baseValue * (1 + (growthImpact + marginImpact + waccImpact) / 100);
+            document.getElementById('dcf-value').textContent = '$' + newValue.toFixed(2);
+            
+            // Update waterfall chart if initialized
+            if (window.waterfallChart) {
+                updateWaterfallChart(growth, margin, wacc);
+            }
+        }
+        
+        function resetAssumptions() {
+            document.getElementById('growth-slider').value = reportData.assumptions.growth;
+            document.getElementById('margin-slider').value = reportData.assumptions.margin;
+            document.getElementById('wacc-slider').value = reportData.assumptions.wacc;
+            document.getElementById('terminal-slider').value = reportData.assumptions.terminal_growth;
+            updateDCF();
+        }
+        
+        // Score Modal
+        function showScoreDetails() {
+            document.getElementById('scoreModal').classList.add('active');
+        }
+        
+        function closeScoreDetails() {
+            document.getElementById('scoreModal').classList.remove('active');
+        }
+        
+        // Table Sorting
+        function sortTable(tableId, columnIndex) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const header = table.querySelectorAll('th')[columnIndex];
+            
+            // Determine sort direction
+            const isAscending = header.classList.contains('sorted-asc');
+            
+            // Remove all sort classes
+            table.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+            });
+            
+            // Sort rows
+            rows.sort((a, b) => {
+                const aValue = a.children[columnIndex].textContent;
+                const bValue = b.children[columnIndex].textContent;
+                
+                // Try to parse as number
+                const aNum = parseFloat(aValue.replace(/[^0-9.-]/g, ''));
+                const bNum = parseFloat(bValue.replace(/[^0-9.-]/g, ''));
+                
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return isAscending ? bNum - aNum : aNum - bNum;
+                } else {
+                    return isAscending ? 
+                        bValue.localeCompare(aValue) : 
+                        aValue.localeCompare(bValue);
+                }
+            });
+            
+            // Update table
+            rows.forEach(row => tbody.appendChild(row));
+            
+            // Update sort indicator
+            header.classList.add(isAscending ? 'sorted-desc' : 'sorted-asc');
+        }
+        
+        // Export Functions
+        
+        function exportExcel() {
+            if (!window.reportData) {
+                alert('No data available to export');
+                return;
+            }
+            // Create CSV content
+            const csvContent = generateCSV();
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${window.reportData.ticker}_report.csv`;
+            a.click();
+        }
+        
+        function generateCSV() {
+            if (!window.reportData) return '';
+            let csv = 'Metric,Value\\n';
+            csv += `Company,${window.reportData.company}\\n`;
+            csv += `Ticker,${window.reportData.ticker}\\n`;
+            csv += `Fair Value,${window.reportData.valuation.fair_value}\\n`;
+            csv += `Current Price,${window.reportData.current_price}\\n`;
+            csv += `Upside,${window.reportData.upside}%\\n`;
+            csv += `Report Quality Score,${window.reportData.evaluation?.overall_score || 'N/A'}\\n`;
+            
+            // Add projections
+            csv += '\\nYear,Revenue,Growth,Margin,FCFF,PV\\n';
+            if (window.reportData.projections) {
+                window.reportData.projections.forEach(row => {
+                    csv += `${row.year},${row.revenue},${row.growth},${row.margin},${row.fcff},${row.pv}\\n`;
+                });
+            }
+            
+            return csv;
+        }
+        
+        function shareReport() {
+            const url = window.location.href;
+            if (navigator.share) {
+                navigator.share({
+                    title: `${reportData.company} Investment Report`,
+                    text: `Check out this investment analysis for ${reportData.ticker}`,
+                    url: url
+                });
+            } else {
+                // Copy to clipboard
+                navigator.clipboard.writeText(url);
+                alert('Report link copied to clipboard!');
+            }
+        }
+        
+        // Chart functions will be loaded from charts.js module
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Populate evidence cards
+            const evidenceContainer = document.getElementById('evidence-cards');
+            if (evidenceContainer && window.reportData && window.reportData.evidence && window.reportData.evidence.length > 0) {
+                window.reportData.evidence.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'evidence-card';
+                    card.innerHTML = `
+                        <div class="evidence-quote">${item.quote}</div>
+                        <div class="evidence-source">
+                            <a href="${item.source}" target="_blank">${item.source_name}</a>
+                            <span class="confidence-badge confidence-${item.confidence_level}">
+                                ${item.confidence}% confidence
+                            </span>
+                        </div>
+                    `;
+                    evidenceContainer.appendChild(card);
+                });
+            } else if (evidenceContainer) {
+                evidenceContainer.innerHTML = '<p class="no-data">No evidence data available</p>';
+            }
+            
+            // Populate news section
+            const newsContainer = document.getElementById('news-container');
+            if (newsContainer) {
+                // Mock news data (in production, this would come from news API)
+                const newsItems = [
+                    {
+                        title: "Company Reports Strong Q4 Earnings",
+                        date: "2 days ago",
+                        summary: "Revenue exceeded analyst expectations with strong growth across all segments."
+                    },
+                    {
+                        title: "New Product Launch Announced",
+                        date: "1 week ago",
+                        summary: "Management unveiled plans for innovative product line targeting emerging markets."
+                    },
+                    {
+                        title: "Strategic Partnership Formed",
+                        date: "2 weeks ago",
+                        summary: "Partnership expected to accelerate growth and expand market reach."
+                    }
+                ];
+                
+                newsItems.forEach(item => {
+                    const newsCard = document.createElement('div');
+                    newsCard.className = 'news-item';
+                    newsCard.innerHTML = `
+                        <div class="news-title">${item.title}</div>
+                        <div class="news-date">${item.date}</div>
+                        <div class="news-summary">${item.summary}</div>
+                    `;
+                    newsContainer.appendChild(newsCard);
+                });
+            }
+            
+            // Populate projections table
+            const tbody = document.getElementById('projections-body');
+            if (tbody && window.reportData && window.reportData.projections) {
+                window.reportData.projections.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.year}</td>
+                        <td>$${row.revenue}</td>
+                        <td>${row.growth}%</td>
+                        <td>${row.margin}%</td>
+                        <td>$${row.fcff}</td>
+                        <td>$${row.pv}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        });
+        
+        // END OF DOMContentLoaded
+                        <div class="evidence-quote">"${item.quote}"</div>
+                        <a href="${item.source}" class="evidence-source">${item.source_name}</a>
+                        <span class="evidence-confidence confidence-${item.confidence_level}">${item.confidence}% confidence</span>
+                    `;
+                    evidenceContainer.appendChild(card);
+                });
+            }
+        });
+        
+        // Mobile menu toggle
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+    </script>
+</body>
+</html>

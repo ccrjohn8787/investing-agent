@@ -295,6 +295,69 @@ def generate_full_professional_report(
         except Exception as e:
             logger.error(f"Evaluation failed: {e}")
     
+    # Step 11: Generate Interactive HTML Report
+    try:
+        from investing_agent.ui import InteractiveReportBuilder
+        
+        logger.info("Step 11: Generating interactive HTML report...")
+        
+        # Get evaluation result if it exists
+        evaluation = None
+        eval_path = output_dir / f"{ticker}_evaluation.json"
+        if eval_path.exists():
+            with eval_path.open() as f:
+                eval_data = json.load(f)
+                # Just pass the raw eval data - the builder will handle it
+                evaluation = eval_data
+        
+        # Fetch current market price
+        current_price = None
+        try:
+            from investing_agent.connectors.yahoo import fetch_prices_v8_chart
+            from investing_agent.connectors.stooq import fetch_prices as fetch_stooq_prices
+            
+            # Try Yahoo first
+            try:
+                price_series = fetch_prices_v8_chart(ticker, range_="5d", interval="1d")
+                if price_series.bars:
+                    current_price = price_series.bars[-1].close
+                    logger.info(f"  Current price (Yahoo): ${current_price:.2f}")
+            except Exception as e:
+                logger.debug(f"Yahoo price fetch failed: {e}")
+            
+            # Try Stooq as fallback
+            if current_price is None:
+                try:
+                    price_series = fetch_stooq_prices(ticker)
+                    if price_series.bars:
+                        current_price = price_series.bars[-1].close
+                        logger.info(f"  Current price (Stooq): ${current_price:.2f}")
+                except Exception as e:
+                    logger.debug(f"Stooq price fetch failed: {e}")
+        except Exception as e:
+            logger.warning(f"Could not fetch market price: {e}")
+        
+        # Build interactive report
+        builder = InteractiveReportBuilder()
+        interactive_html = builder.build(
+            inputs=inputs,
+            valuation=valuation,
+            narratives=narrative_sections if use_llm else None,
+            evaluation=evaluation,
+            evidence=None,  # Could add evidence if available
+            current_price=current_price  # Pass actual market price
+        )
+        
+        # Save interactive report
+        interactive_path = output_dir / "interactive_report.html"
+        builder.save_report(interactive_html, interactive_path, include_chart_js=True)
+        
+        logger.info(f"  ✓ Interactive report saved: {interactive_path}")
+        logger.info(f"  ✓ Open in browser: file://{interactive_path.absolute()}")
+        
+    except Exception as e:
+        logger.warning(f"Could not generate interactive report: {e}")
+    
     logger.info(f"\n{'='*60}")
     logger.info(f"REPORT GENERATION COMPLETE")
     logger.info(f"{'='*60}")

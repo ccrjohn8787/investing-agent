@@ -47,7 +47,23 @@ This roadmap captures the end goal, success criteria, milestones, and current st
 - M13 Orchestrator FSM: structured flow with router loop + stop conditions — PENDING
 - M14 Web UI (optional): single‑file HTML viewer + lightweight UI — OPTIONAL
 
-### Current Status (2025‑Q3)
+### Current Status (2025‑Q1)
+
+**Completed Initiatives:**
+- ✅ **DBOT Quality Gap (P0-P7):** Professional report generation system with LLM narratives
+- ✅ **Evidence Pipeline:** Research-once-then-freeze architecture with full auditability
+- ✅ **Evaluation Framework:** 5-dimensional quality scoring with BYD benchmark
+- ✅ **API Safety:** Cost controls with GPT-4o-mini as default model
+- ✅ **Professional Writer:** Story-to-numbers narrative generation with citations
+
+**Current Initiative:**
+- 🚧 **P8 Interactive UI:** Modern HTML interface with evaluation score integration (see `docs/UI_ARCHITECTURE.md`)
+
+**Next Priorities:**
+- Web-based report viewer with interactive DCF model
+- Real-time collaboration features
+- Mobile-responsive design
+- Advanced export capabilities
 - Kernel, reports, audit trail, and algorithm spec are in place. Router heuristics have unit coverage. Market solver and comparables are implemented with bounds; consensus maps near‑term and trends the tail back to stable. Manifest snapshots include EDGAR/UST/prices with size/content_type. CI runs ruff/mypy/pytest on 3.11/3.12.
 
 ### Next Actions (near‑term)

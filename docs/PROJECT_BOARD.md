@@ -8,9 +8,9 @@ This repo tracks milestones from `docs/ROADMAP.md` via a GitHub Project board. U
 3. Add saved views: `Milestones` (group by label), `Agents` (filter `label:agent`), `Connectors` (filter `label:connector`).
 
 ### Labels
-- Create labels mapping to milestones: `M0`, `M1`, … `M14`.
-- Component labels: `agent`, `kernel`, `connector`, `writer`, `cli`, `docs`.
-- Priority labels: `P0`, `P1`, `P2`.
+- Priority labels (DBOT Quality Gap): `P0-Evaluation`, `P1-Evidence`, `P2-Writer`, `P3-Comparables`, `P4-Prompts`, `P5-Router`, `P6-Structure`, `P7-Dashboard`, `P8-UI`.
+- Component labels: `agent`, `kernel`, `connector`, `writer`, `cli`, `docs`, `ui`, `evaluation`.
+- Status labels: `completed`, `in-progress`, `pending`.
 
 ### Seed Issues (suggested)
 - Create one issue per milestone with a checklist matching `docs/ROADMAP.md` and link to it.

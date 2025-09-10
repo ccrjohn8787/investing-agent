@@ -15,32 +15,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - After you complete tasks in the plan, you should update and append detailed descriptions of the changes you made, so following tasks can be easily hand over to other engineers.
 
 ### Active Development Plan
-**Current Major Initiative:** DBOT Quality Gap Implementation
-- **Plan Location:** `.claude/tasks/dbot_quality_gap.md` 
-- **Objective:** Transform from numbers-only reports to story-to-numbers approach matching BYD report quality
-- **Current Priority:** P2 - Writer/Critic Upgrade (Read-Only + Citations)
-- **Architecture:** Research-once-then-freeze with evidence pipeline and Model-PR logging ✅
-- **Key Principles:** Evaluation-first development, strict citation discipline, deterministic reproducibility
+**Current Major Initiative:** Interactive UI for Professional Reports
+- **Plan Location:** `.claude/tasks/dbot_quality_gap.md` (Priority 8)
+- **Design Doc:** `docs/UI_ARCHITECTURE.md`
+- **Objective:** Create interactive, professional UI for investment reports with evaluation integration
+- **Architecture:** Separation of UI layer from data/logic layer with JSON interface
+- **Key Principles:** Progressive enhancement, self-contained reports, evaluation score visibility
 
 **Major Achievements:**
 - ✅ P0: LLM-Based Report Evaluation Framework with 5-dimensional scoring
 - ✅ P1: Evidence Pipeline with research-once-then-freeze architecture and Model-PR logging
+- ✅ P2-P7: Complete professional report generation system with all features
+- ✅ Safety: API cost controls with GPT-4o-mini as default model
+- 🚧 P8: Interactive UI implementation (IN PROGRESS)
 
 ## CRITICAL SAFETY RULES FOR API USAGE
 
 ⚠️ **NEVER run live data or call GPT API without explicit user permission**
 - **ALWAYS ASK FIRST** before running any script that calls OpenAI API
-- **DEFAULT TO GPT-4o-mini** (standard mode) for all reports unless user explicitly requests GPT-4
-- **NEVER USE GPT-4** (premium mode) unless user specifically says "use GPT-4" or "premium"
+- **DEFAULT TO gpt-5-mini** (standard mode) for all reports unless user explicitly requests premium
+- **NEVER USE gpt-5** (premium mode) unless user specifically says "use premium" or "--premium"
 - **COST AWARENESS**: 
-  - GPT-4o-mini: $0.0008/report (DEFAULT)
-  - GPT-4: $0.15/report (ONLY when explicitly requested)
+  - gpt-5-mini (gpt-4o-mini): $0.0008/report (DEFAULT)
+  - gpt-5 (gpt-4): $0.15/report (ONLY when explicitly requested)
 - **BATCH LIMITS**: Never generate more than 3 reports in a row without asking
 - **ALWAYS SHOW COST** before running: "This will cost approximately $X.XX"
 
 ### Examples of proper behavior:
-- User: "Generate a report for AAPL" → Use standard mode (GPT-4o-mini) by default
-- User: "Generate a premium report for AAPL with GPT-4" → Use premium mode
+- User: "Generate a report for AAPL" → Use standard mode (gpt-5-mini/gpt-4o-mini) by default
+- User: "Generate a premium report for AAPL" → Use premium mode (gpt-5/gpt-4)
 - User: "Generate reports for 10 companies" → ASK FIRST: "This will generate 10 reports at ~$0.008 total cost. Proceed?"
 
 ## Essential Commands
@@ -60,11 +63,14 @@ pip install -e .[dev]
 - Type check: `mypy investing_agent`
 - Full CI pipeline: `make ci` (lint + mypy + tests)
 
-### Reporting & Demo
+### Reporting & Demo (Minimalist HTML by Default)
 - Generate demo report: `make demo` (synthetic data, no network)
 - Build inputs for ticker: `make build_i CT=<TICKER>`
-- Generate report for ticker: `make report CT=<TICKER>`
-- Generate reports with overrides: `python scripts/report.py <TICKER> --growth '8%,7%' --margin '12%,13%' --s2c '2.0,2.2'`
+- Generate report for ticker: `make report CT=<TICKER>` (minimalist HTML, gpt-5-mini/gpt-4o-mini)
+- Generate premium report: `python scripts/report.py <TICKER> --premium` (uses gpt-5/gpt-4)
+- Generate with evaluation: `python scripts/report.py <TICKER> --evaluate`
+- Generate without LLM: `python scripts/report.py <TICKER> --disable-llm`
+- Generate interactive report (legacy): `python scripts/report.py <TICKER> --interactive`
 - Web UI index: `make ui` (creates out/index.html)
 
 ### Evidence-Enhanced Reporting (NEW)

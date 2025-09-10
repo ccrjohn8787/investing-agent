@@ -1,24 +1,65 @@
-Investing Agent (MVP)
+# Investing Agent
 
-Overview
-- Deterministic, provenance-first valuation pipeline with a compatible FCF engine ("Ginzu") using four drivers: sales growth, operating margin, cost of capital (WACC), and reinvestment efficiency (sales-to-capital).
-- No paid APIs in v1. US fundamentals via SEC EDGAR, prices via Yahoo/Stooq, macro via Treasury/FRED.
-- Initial focus on end-to-end single-ticker reports (Markdown + PNGs). Backtesting harness stubbed for post-MVP.
+## Overview
+Professional investment research platform generating institutional-grade equity reports with:
+- **Deterministic DCF valuation** using four key drivers: sales growth, operating margin, WACC, and sales-to-capital
+- **Evidence-based research** with frozen snapshots and complete audit trails
+- **LLM-enhanced narratives** with GPT-4o-mini (default) for cost-efficient professional reports
+- **Multi-dimensional evaluation** framework ensuring report quality (BYD benchmark standard)
+- **Interactive HTML reports** with charts, tables, and financial analysis
 
-Determinism
-- Numeric computation is pure NumPy and fully reproducible.
-- Future LLM usage will fix temp=0, top_p=1, seed.
-- All artifacts carry source URLs and content hashes.
+## Core Features
+- **Valuation Engine ("Ginzu")**: Pure NumPy DCF implementation with full reproducibility
+- **Evidence Pipeline**: Research-once-then-freeze architecture with Model-PR logging
+- **Professional Writer**: Story-to-numbers narrative generation matching analyst-grade quality
+- **Quality Evaluation**: 5-dimensional scoring system with LLM-as-judge capabilities
+- **Safety Controls**: API cost management with explicit confirmation requirements
 
-Math
-- See `docs/VALUATION_MATH.md` for equations and the end-to-end PV and equity bridge.
+## Quick Start
 
-Algorithm
-- See `docs/ALGORITHM.md` for the paper-aligned end-to-end algorithm, module bindings, and router loop.
+### Setup
+```bash
+# Create virtual environment and install
+python -m venv .venv && . .venv/bin/activate
+pip install -e .[dev]
 
-Roadmap
-- See `docs/ROADMAP.md` for milestones, success criteria, and current status.
-  - Current: M10 (scenarios/CLI) DONE, M8 (citations/refs) DONE, M7 (snapshot meta) DONE, M5 (market/comps + consensus polish) PARTIAL.
+# Configure API keys (see API_SAFETY_SETTINGS.md)
+cp .env.example .env
+# Edit .env to add your OPENAI_API_KEY
+```
+
+### Generate Reports
+```bash
+# Demo report (no API calls)
+make demo
+
+# Professional report with LLM narratives (uses GPT-4o-mini by default)
+python scripts/safe_report_generator.py AAPL
+
+# Multiple companies with cost confirmation
+python scripts/safe_report_generator.py AAPL MSFT GOOGL
+
+# Premium quality (GPT-4, only when needed)
+python scripts/safe_report_generator.py AAPL --quality premium
+```
+
+## Documentation
+- **Setup & Configuration**: See `ENV_SETUP.md` and `API_SAFETY_SETTINGS.md`
+- **Architecture**: See `AGENTS.md` for agent design and `docs/VALUATION_MATH.md` for DCF math
+- **Evidence Pipeline**: See `EVIDENCE_PIPELINE_GUIDE.md` for research architecture
+- **LLM Integration**: See `LLM_INTEGRATION_GUIDE.md` for model configuration
+- **Report Evaluation**: See `REPORT_QUALITY_EVALUATION_README.md` for quality framework
+- **Troubleshooting**: See `TROUBLESHOOTING.md` for common issues
+
+## Current Status
+- ✅ **P0**: LLM-Based Report Evaluation Framework
+- ✅ **P1**: Evidence Pipeline with Research-Once Architecture
+- ✅ **P2**: Professional Writer with Evidence Integration
+- ✅ **P3**: Comparables & WACC Foundation
+- ✅ **P4-6**: Professional Report Generation System
+- ✅ **P7**: Evaluation Dashboard & Continuous Improvement
+- ✅ **Safety**: API cost controls with GPT-4o-mini default
+- 🚧 **Next**: Interactive UI for better report visualization
 
 Structure
 - `investing_agent/schemas`: Typed objects for inputs, outputs, and fundamentals.
