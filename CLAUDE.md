@@ -15,19 +15,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - After you complete tasks in the plan, you should update and append detailed descriptions of the changes you made, so following tasks can be easily hand over to other engineers.
 
 ### Active Development Plan
-**Current Major Initiative:** Interactive UI for Professional Reports
-- **Plan Location:** `.claude/tasks/dbot_quality_gap.md` (Priority 8)
-- **Design Doc:** `docs/UI_ARCHITECTURE.md`
-- **Objective:** Create interactive, professional UI for investment reports with evaluation integration
-- **Architecture:** Separation of UI layer from data/logic layer with JSON interface
-- **Key Principles:** Progressive enhancement, self-contained reports, evaluation score visibility
+**Current Status:** All Major Priorities Complete - Production Ready System
+- **Latest Achievement:** Minimalist HTML Reports as Default (Priority 8)
+- **Architecture:** Clean, reliable HTML reports with full data transparency
+- **Key Principles:** Reliability over complexity, complete data visibility, professional presentation
 
 **Major Achievements:**
 - ✅ P0: LLM-Based Report Evaluation Framework with 5-dimensional scoring
 - ✅ P1: Evidence Pipeline with research-once-then-freeze architecture and Model-PR logging
 - ✅ P2-P7: Complete professional report generation system with all features
-- ✅ Safety: API cost controls with GPT-4o-mini as default model
-- 🚧 P8: Interactive UI implementation (IN PROGRESS)
+- ✅ P8: Minimalist HTML Reports (Default) - Clean, reliable, data-rich reports
+- ✅ Safety: API cost controls with gpt-5-mini as default model
+- ✅ Model Integration: GPT-5 and GPT-5-mini support with fallback to GPT-4 models
+
+**Current Focus:** System is production-ready for institutional-grade investment reports
 
 ## CRITICAL SAFETY RULES FOR API USAGE
 
